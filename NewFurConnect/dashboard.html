@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FurConnect | Dashboard</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <section id="mainSystem">
+    <div class="container-fluid p-0 overflow-hidden">
+
+      <nav class="sidebar">
+        <div class="sidebar-inner">
+          <div class="text-center mb-5 brand-wrap">
+            <img src="paw2.png" alt="paw" class="sidebar-logo mb-2">
+            <h2 class="fw-bold">FurConnect</h2>
+          </div>
+
+          <a href="dashboard.html" id="btn-dashboard" class="btn btn-light nav-btn-custom active-nav">Dashboard</a>
+
+          <div class="appointment-nav-dropdown" id="appointmentDropdown">
+            <button id="btn-appointment" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
+              <span>Appointment</span>
+              <span class="nav-arrow">⌄</span>
+            </button>
+
+            <div class="appointment-dropdown-menu">
+              <a href="appointments.html" class="dropdown-link-btn">Registration</a>
+              <a href="archived-appointments.html" class="dropdown-link-btn">Archived Appointment</a>
+            </div>
+          </div>
+
+          <div class="appointment-nav-dropdown" id="recordsDropdown">
+            <button id="btn-records" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
+              <span>Patient Records</span>
+              <span class="nav-arrow">⌄</span>
+            </button>
+
+            <div class="appointment-dropdown-menu">
+              <a href="records.html" class="dropdown-link-btn">Active Records</a>
+              <a href="archived-records.html" class="dropdown-link-btn">Archived Records</a>
+            </div>
+          </div>
+
+          <a href="inventory.html" id="btn-inventory" class="btn btn-light nav-btn-custom">Inventory</a>
+
+         <!--  <div class="appointment-nav-dropdown" id="employeesDropdown">
+            <button id="btn-employees" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
+              <span>Employees</span>
+              <span class="nav-arrow">⌄</span>
+            </button>
+
+            <div class="appointment-dropdown-menu">
+              <a href="employees.html" class="dropdown-link-btn">Employee List</a>
+              <a href="attendance.html" class="dropdown-link-btn">Attendance</a>
+              <a href="payroll.html" class="dropdown-link-btn">Payroll</a>
+              <a href="archived-payroll.html" class="dropdown-link-btn">Archived Payroll</a>
+              <a href="archived-employees.html" class="dropdown-link-btn">Archived Employees</a>
+            </div>
+          </div> --> 
+
+          <div class="logout-wrap">
+            <a href="login.html" id="logoutBtn" class="btn btn-danger w-100">Logout</a>
+          </div>
+        </div>
+      </nav>
+
+      <main class="page-area p-4 p-lg-5">
+
+        <section id="dashboardPage" class="internal-page">
+          <div class="page-title-wrap dashboard-header">
+            <div class="dashboard-header-left">
+              <h1 class="display-5 mb-2">Dashboard</h1>
+              <p class="fs-5 mb-0">Overview of your clinic activities and quick actions</p>
+            </div>
+
+            <div class="dashboard-datetime-box text-end">
+              <div class="dashboard-datetime-label">Philippine Date & Time</div>
+              <div class="dashboard-datetime-value" id="dashboardDateTime">Loading...</div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <div class="card stats-card bg-primary h-100">
+                <div class="card-body">
+                  <div class="small">Appointments</div>
+                  <div class="fs-2 fw-bold" id="dashboardAppointments">0</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="card stats-card bg-success h-100">
+                <div class="card-body">
+                  <div class="small">Present Employees</div>
+                  <div class="fs-2 fw-bold" id="dashboardPresentEmployees">0</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <div class="card stats-card bg-warning h-100">
+                <div class="card-body">
+                  <div class="small">Low Stock Items</div>
+                  <div class="fs-2 fw-bold" id="dashboardLowStockCount">0</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card dashboard-soft-card appointments-card mt-4">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                  <h4 class="mb-1 dashboard-section-title">Upcoming Appointments</h4>
+                  <p class="dashboard-section-subtitle mb-0">List of scheduled pet appointments</p>
+                </div>
+
+                <button id="archiveAppointmentBtn" class="btn btn-action btn-sm archive-appointment-btn" type="button">
+                  Archive Appointment
+                </button>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table dashboard-table align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Pet Name</th>
+                      <th>Owner</th>
+                      <th>Schedule</th>
+                      <th>Appointment</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="upcomingAppointmentsBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card dashboard-soft-card mt-4">
+            <div class="card-body p-4">
+              <h4 class="mb-1 dashboard-section-title">Patient Rebooking Requests</h4>
+              <p class="dashboard-section-subtitle mb-3">List of rebooking requests patients</p>
+
+              <div class="table-responsive">
+                <table class="table dashboard-table align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Patient ID</th>
+                      <th>Pet Name</th>
+                      <th>Owner</th>
+                      <th>Service</th>
+                      <th>Date</th>
+                      <th>Time</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="patientRebookingRequestsBody">
+                    <tr>
+                      <td colspan="8" class="text-center text-muted py-4">No patient rebooking requests found.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card dashboard-soft-card mt-4">
+            <div class="card-body p-4">
+              <h4 class="mb-1 dashboard-section-title">Inventory Restock Alerts</h4>
+              <p class="dashboard-section-subtitle mb-3">Items that need immediate restocking</p>
+
+              <div class="table-responsive">
+                <table class="table dashboard-table align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Item Name</th>
+                      <th>Category</th>
+                      <th>Quantity</th>
+                    </tr>
+                  </thead>
+                  <tbody id="lowStockBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card dashboard-soft-card mt-4">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div>
+                  <h4 class="mb-1 dashboard-section-title">Recent Activity</h4>
+                  <p class="dashboard-section-subtitle mb-0">Latest actions from appointments, records, inventory, and employees</p>
+                </div>
+
+                <button class="btn btn-action px-4" id="clearActivityLogsBtn" type="button">
+                  Clear Activity
+                </button>
+              </div>
+
+              <div class="table-responsive activity-table-scroll">
+                <table class="table dashboard-table align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Date & Time</th>
+                      <th>Module</th>
+                      <th>Action</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activityLogBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
