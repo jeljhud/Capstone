@@ -55,6 +55,9 @@ function initializePasswordToggle() {
     const isPassword = passwordInput.type === "password";
 
     passwordInput.type = isPassword ? "text" : "password";
-    togglePasswordBtn.textContent = isPassword ? "Hide" : "Show";
+
+    togglePasswordBtn.innerHTML = isPassword
+      ? '<i class="bi bi-eye-slash"></i>'
+      : '<i class="bi bi-eye"></i>';
   });
 }

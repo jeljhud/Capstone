@@ -3,7 +3,41 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 /* TEMP DATA (papalitan later ng Firebase) */
-let patientRecords = [];
+let patientRecords = [
+  {
+    id: 101,
+    petName: "Bantay",
+    petSpecies: "Dog",
+    breed: "Aspin",
+    ownerName: "Juan Dela Cruz",
+    appointmentDate: "2026-05-30",
+    appointmentTime: "09:00",
+    appointmentType: "Grooming",
+    appointmentArchived: false
+  },
+  {
+    id: 102,
+    petName: "Mingming",
+    petSpecies: "Cat",
+    breed: "Persian",
+    ownerName: "Maria Santos",
+    appointmentDate: "2026-05-31",
+    appointmentTime: "10:30",
+    appointmentType: "Vaccination",
+    appointmentArchived: false
+  },
+  {
+    id: 103,
+    petName: "Brownie",
+    petSpecies: "Dog",
+    breed: "Shih Tzu",
+    ownerName: "Ana Reyes",
+    appointmentDate: "2026-06-01",
+    appointmentTime: "13:00",
+    appointmentType: "Checkup",
+    appointmentArchived: true
+  }
+];
 
 /* ================= INIT ================= */
 

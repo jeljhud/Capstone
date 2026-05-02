@@ -4,79 +4,116 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 /* TEMP DATA — papalitan later ng Firebase */
-let archivedAppointments = [];
+let archivedAppointments = [
+  {
+    id: "A001",
+    petName: "Buddy",
+    ownerName: "Juan Dela Cruz",
+    appointmentDate: "2026-05-10",
+    appointmentTime: "10:00",
+    appointmentType: "Grooming",
+    appointmentStatus: "Finished",
+    notes: "Full groom, nails trimmed",
+    archivedAt: "2026-05-10T11:00:00"
+  },
+  {
+    id: "A002",
+    petName: "Milo",
+    ownerName: "Maria Santos",
+    appointmentDate: "2026-05-15",
+    appointmentTime: "14:00",
+    appointmentType: "Checkup",
+    appointmentStatus: "Finished",
+    notes: "Vaccinated",
+    archivedAt: "2026-05-15T15:00:00"
+  }
+];
+
+let currentLogsPage = 1;
+const logsPerPage = 8;
+let logsFilterTimer = null;
+
+/* ================= FILTER + PAGINATION ================= */
+
+function getFilteredArchivedAppointments() {
+  const searchInput = document.getElementById("archivedAppointmentSearch");
+  const fromInput = document.getElementById("archivedFromDate");
+  const toInput = document.getElementById("archivedToDate");
+
+  const keyword = (searchInput?.value || "").toLowerCase().trim();
+  const fromDate = fromInput?.value || "";
+  const toDate = toInput?.value || "";
+
+  return archivedAppointments.filter((item) => {
+    const searchableText = `
+      ${item.id || ""}
+      ${item.petName || ""}
+      ${item.ownerName || ""}
+      ${item.appointmentType || ""}
+      ${item.appointmentStatus || ""}
+      ${item.notes || ""}
+    `.toLowerCase();
+
+    const matchesSearch = searchableText.includes(keyword);
+
+    const archivedDateValue = getDateOnly(item.archivedAt || item.appointmentDate);
+    const matchesFrom = !fromDate || archivedDateValue >= fromDate;
+    const matchesTo = !toDate || archivedDateValue <= toDate;
+
+    return matchesSearch && matchesFrom && matchesTo;
+  });
+}
+
+/* ================= LOADING RENDER ================= */
+
+function renderArchivedAppointmentsWithLoading() {
+  const loader = document.getElementById("logsLoadingOverlay");
+
+  if (loader) loader.classList.add("show");
+
+  clearTimeout(logsFilterTimer);
+
+  logsFilterTimer = setTimeout(() => {
+    currentLogsPage = 1;
+    renderArchivedAppointments();
+
+    if (loader) loader.classList.remove("show");
+  }, 600);
+}
 
 /* ================= RENDER ================= */
 
 function renderArchivedAppointments() {
+  const filtered = getFilteredArchivedAppointments();
+  const totalPages = Math.ceil(filtered.length / logsPerPage) || 1;
+
+  if (currentLogsPage > totalPages) currentLogsPage = totalPages;
+
+  const startIndex = (currentLogsPage - 1) * logsPerPage;
+  const paginatedList = filtered.slice(startIndex, startIndex + logsPerPage);
+
+  renderArchivedAppointmentsRows(paginatedList, filtered.length, startIndex);
+  renderLogsPagination(filtered.length);
+}
+
+function renderArchivedAppointmentsRows(list, totalCount, startIndex) {
   const tableBody = document.getElementById("archivedAppointmentsBody");
+  const showingText = document.getElementById("logsShowingText");
 
   if (!tableBody) return;
 
   tableBody.innerHTML = "";
 
-  if (archivedAppointments.length === 0) {
+  if (totalCount === 0) {
     tableBody.innerHTML = `
       <tr>
-        <td colspan="7" class="text-center text-muted py-4">
-          No archived appointments found.
+        <td colspan="8" class="text-center text-muted py-4">
+          No appointment logs found for the selected filters.
         </td>
       </tr>
     `;
-    return;
-  }
 
-  archivedAppointments.forEach((item) => {
-    const row = document.createElement("tr");
-
-    row.innerHTML = `
-      <td>${item.id || ""}</td>
-      <td>${item.petName || ""}</td>
-      <td>${item.ownerName || ""}</td>
-      <td>${formatSchedule(item.appointmentDate, item.appointmentTime)}</td>
-      <td>${item.appointmentType || ""}</td>
-      <td>${item.appointmentStatus || ""}</td>
-      <td>${formatDate(item.archivedAt)}</td>
-    `;
-
-    tableBody.appendChild(row);
-  });
-}
-
-/* ================= SEARCH ================= */
-
-function initializeArchivedAppointmentsEvents() {
-  const searchInput = document.getElementById("archivedAppointmentSearch");
-
-  if (searchInput) {
-    searchInput.addEventListener("input", function () {
-      const keyword = this.value.toLowerCase();
-
-      const filtered = archivedAppointments.filter((item) =>
-        (item.petName || "").toLowerCase().includes(keyword) ||
-        (item.ownerName || "").toLowerCase().includes(keyword) ||
-        (item.appointmentType || "").toLowerCase().includes(keyword)
-      );
-
-      renderFilteredArchivedAppointments(filtered);
-    });
-  }
-}
-
-function renderFilteredArchivedAppointments(list) {
-  const tableBody = document.getElementById("archivedAppointmentsBody");
-  if (!tableBody) return;
-
-  tableBody.innerHTML = "";
-
-  if (list.length === 0) {
-    tableBody.innerHTML = `
-      <tr>
-        <td colspan="7" class="text-center text-muted py-4">
-          No results found.
-        </td>
-      </tr>
-    `;
+    if (showingText) showingText.textContent = "Showing 0 logs";
     return;
   }
 
@@ -85,16 +122,130 @@ function renderFilteredArchivedAppointments(list) {
 
     row.innerHTML = `
       <td>${item.id || ""}</td>
-      <td>${item.petName || ""}</td>
-      <td>${item.ownerName || ""}</td>
+      <td>
+        <strong>${item.petName || ""}</strong>
+        ${item.petBreed ? `<br><span class="text-muted">${item.petBreed}</span>` : ""}
+      </td>
+      <td>
+        <strong>${item.ownerName || ""}</strong>
+        ${item.ownerContact ? `<br><span class="text-muted">${item.ownerContact}</span>` : ""}
+      </td>
       <td>${formatSchedule(item.appointmentDate, item.appointmentTime)}</td>
       <td>${item.appointmentType || ""}</td>
-      <td>${item.appointmentStatus || ""}</td>
-      <td>${formatDate(item.archivedAt)}</td>
+      <td>
+        <span class="status-log-finished">
+          ${item.appointmentStatus || "Finished"}
+        </span>
+      </td>
+      <td class="log-notes-cell">${item.notes || "-"}</td>
+      <td>${formatArchivedDateTime(item.archivedAt)}</td>
     `;
 
     tableBody.appendChild(row);
   });
+
+  if (showingText) {
+    const from = startIndex + 1;
+    const to = startIndex + list.length;
+    showingText.textContent = `Showing ${from} to ${to} of ${totalCount} logs`;
+  }
+}
+
+function renderLogsPagination(totalCount) {
+  const pagination = document.getElementById("logsPagination");
+  if (!pagination) return;
+
+  const totalPages = Math.ceil(totalCount / logsPerPage) || 1;
+  pagination.innerHTML = "";
+
+  if (totalCount <= logsPerPage) return;
+
+  const prevBtn = createPageButton("‹", currentLogsPage === 1, () => {
+    currentLogsPage--;
+    renderArchivedAppointments();
+  });
+
+  pagination.appendChild(prevBtn);
+
+  for (let page = 1; page <= totalPages; page++) {
+    const pageBtn = createPageButton(page, false, () => {
+      currentLogsPage = page;
+      renderArchivedAppointments();
+    });
+
+    if (page === currentLogsPage) {
+      pageBtn.classList.add("active");
+    }
+
+    pagination.appendChild(pageBtn);
+  }
+
+  const nextBtn = createPageButton("›", currentLogsPage === totalPages, () => {
+    currentLogsPage++;
+    renderArchivedAppointments();
+  });
+
+  pagination.appendChild(nextBtn);
+}
+
+function createPageButton(label, disabled, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "logs-page-btn";
+  button.textContent = label;
+  button.disabled = disabled;
+
+  if (!disabled) {
+    button.addEventListener("click", onClick);
+  }
+
+  return button;
+}
+
+/* ================= EVENTS ================= */
+
+function initializeArchivedAppointmentsEvents() {
+  const searchInput = document.getElementById("archivedAppointmentSearch");
+  const fromInput = document.getElementById("archivedFromDate");
+  const toInput = document.getElementById("archivedToDate");
+  const exportBtn = document.getElementById("exportArchivedAppointmentsBtn");
+
+  [searchInput, fromInput, toInput].forEach((input) => {
+    if (!input) return;
+    input.addEventListener("input", renderArchivedAppointmentsWithLoading);
+  });
+
+  if (exportBtn) {
+    exportBtn.addEventListener("click", exportArchivedAppointmentsToExcel);
+  }
+}
+
+/* ================= EXPORT ================= */
+
+function exportArchivedAppointmentsToExcel() {
+  const filtered = getFilteredArchivedAppointments();
+
+  if (filtered.length === 0) {
+    alert("No appointment logs to export.");
+    return;
+  }
+
+  const rows = filtered.map((item) => ({
+    ID: item.id || "",
+    "Pet Name": item.petName || "",
+    Owner: item.ownerName || "",
+    Schedule: stripHtml(formatSchedule(item.appointmentDate, item.appointmentTime)),
+    Appointment: item.appointmentType || "",
+    Status: item.appointmentStatus || "Finished",
+    Notes: item.notes || "",
+    "Archived Date": stripHtml(formatArchivedDateTime(item.archivedAt))
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Appointment Logs");
+  XLSX.writeFile(workbook, "appointment-logs.xlsx");
 }
 
 /* ================= HELPERS ================= */
@@ -104,13 +255,13 @@ function formatSchedule(date, time) {
 
   const formattedDate = new Date(date).toLocaleDateString("en-US", {
     year: "numeric",
-    month: "long",
-    day: "numeric"
+    month: "2-digit",
+    day: "2-digit"
   });
 
   if (!time) return formattedDate;
 
-  return `${formattedDate} ${formatTime(time)}`;
+  return `${formattedDate}<br>${formatTime(time)}`;
 }
 
 function formatTime(timeValue) {
@@ -125,12 +276,39 @@ function formatTime(timeValue) {
   return `${hours}:${minutes} ${ampm}`;
 }
 
-function formatDate(date) {
+function formatArchivedDateTime(date) {
   if (!date) return "-";
 
-  return new Date(date).toLocaleDateString("en-US", {
+  const dateObj = new Date(date);
+
+  const formattedDate = dateObj.toLocaleDateString("en-US", {
     year: "numeric",
-    month: "short",
-    day: "numeric"
+    month: "2-digit",
+    day: "2-digit"
   });
+
+  const formattedTime = dateObj.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  return `${formattedDate}<br>${formattedTime}`;
+}
+
+function getDateOnly(date) {
+  if (!date) return "";
+
+  const dateObj = new Date(date);
+
+  if (isNaN(dateObj.getTime())) return "";
+
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function stripHtml(value) {
+  return String(value || "").replace(/<br\s*\/?>/gi, " ");
 }

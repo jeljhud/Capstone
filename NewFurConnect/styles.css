@@ -255,14 +255,16 @@ textarea {
   box-shadow: none;
 }
 
-.nav-btn-custom:hover,
-.active-nav {
-  background: #ffffff !important;
-  border-color: rgba(15, 109, 122, 0.28) !important;
-  color: var(--primary) !important;
-  transform: translateX(6px) !important;
-  box-shadow: 0 10px 24px rgba(15, 109, 122, 0.18) !important;
+.nav-btn-custom {
+  transition: all 0.25s ease;
 }
+
+.nav-btn-custom:hover {
+  transform: none !important; /* remove movement */
+  background: #f5f9fa; /* very light hover lang */
+  color: #12363d;
+}
+
 
 .appointment-nav-dropdown,
 .employee-nav-dropdown,
@@ -516,17 +518,6 @@ textarea {
   resize: vertical;
 }
 
-.field-invalid,
-input:required:invalid,
-select:required:invalid {
-  border-color: var(--danger) !important;
-}
-
-.field-valid,
-input:required:valid,
-select:required:valid {
-  border-color: var(--success) !important;
-}
 
 #registerPage .form-select.custom-input,
 #ageUnit {
@@ -623,10 +614,6 @@ select:required:valid {
 
 .custom-dropdown.invalid .dropdown-selected {
   border: 2px solid #e74c3c !important;
-}
-
-.custom-dropdown.valid .dropdown-selected {
-  border: 2px solid #2ecc71 !important;
 }
 
 /* =========================================================
@@ -1510,10 +1497,9 @@ select:required:valid {
 }
 
 .register-three-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1.35fr;
-  gap: 22px;
-  align-items: start;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 20px;
 }
 
 .register-section-card {
@@ -5332,3 +5318,1458 @@ body:has(#publicPatientPage:not(.hidden)) .fc-phone {
   display: block;
   text-decoration: none;
 }
+
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper .form-control {
+  padding-right: 50px !important;
+}
+
+.password-eye {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #000;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* FORCE REMOVE ALL VALIDATION COLORS */
+input,
+.form-control,
+input.form-control {
+  border: 1.5px solid #000 !important;
+  box-shadow: none !important;
+}
+
+/* REMOVE RED (INVALID) */
+input:invalid,
+.form-control:invalid,
+.was-validated .form-control:invalid {
+  border-color: #000 !important;
+  box-shadow: none !important;
+}
+
+/* REMOVE GREEN (VALID) */
+input:valid,
+.form-control:valid,
+.was-validated .form-control:valid {
+  border-color: #000 !important;
+  box-shadow: none !important;
+}
+
+/* REMOVE BOOTSTRAP STATES */
+.form-control.is-invalid,
+.form-control.is-valid {
+  border-color: #000 !important;
+  box-shadow: none !important;
+}
+
+/* FOCUS STATE */
+.form-control:focus {
+  border-color: #000 !important;
+  box-shadow: none !important;
+  outline: none;
+}
+
+/* DASHBOARD QUICK LINKS */
+.dashboard-quicklinks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin: 26px 0;
+}
+
+.quicklink-card {
+  min-height: 120px;
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(15, 109, 122, 0.14);
+  border-radius: 28px;
+  color: #12363d;
+  text-decoration: none;
+  box-shadow: 0 18px 45px rgba(15, 109, 122, 0.10);
+  transition: 0.25s ease;
+}
+
+.quicklink-card:hover {
+  background: #ffffff;
+  transform: translateY(-4px);
+  box-shadow: 0 24px 60px rgba(15, 109, 122, 0.16);
+}
+
+.quicklink-icon {
+  width: 58px;
+  height: 58px;
+  min-width: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e9f7f9;
+  border-radius: 18px;
+  color: #0f6d7a;
+  font-size: 26px;
+  font-weight: 900;
+}
+
+.quicklink-card h3 {
+  margin: 0 0 5px;
+  color: #082f38;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.quicklink-card p {
+  margin: 0;
+  color: #63757d;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (max-width: 992px) {
+  .dashboard-quicklinks {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 2x2 GRID */
+.dashboard-quicklinks {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin: 25px 0 30px;
+}
+
+/* CARD */
+.quicklink-card {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(15, 109, 122, 0.12);
+  border-radius: 22px;
+
+  color: #12363d;
+  text-decoration: none;
+
+  transition: all 0.2s ease;
+}
+
+/* HOVER (same style language ng system mo) */
+.quicklink-card:hover {
+  background: #ffffff;
+}
+
+/* ICON */
+.quicklink-icon {
+  width: 50px;
+  height: 50px;
+  min-width: 50px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #e9f7f9;
+  border-radius: 14px;
+
+  color: #0f6d7a;
+  font-size: 20px;
+}
+
+/* TEXT */
+.quicklink-card h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #082f38;
+}
+
+.quicklink-card p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #6c7a80;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .dashboard-quicklinks {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+
+  background: rgba(255,255,255,0.9);
+  border-radius: 18px;
+  border: 1px solid rgba(15,109,122,0.12);
+}
+
+.stat-icon {
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e9f7f9;
+  border-radius: 12px;
+  color: #0f6d7a;
+  font-size: 18px;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #082f38;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #6c7a80;
+}
+
+@media (max-width: 768px) {
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* DASHBOARD TABLE - COMPACT */
+.dashboard-table th,
+.dashboard-table td {
+  padding: 8px 10px !important;  /* dati ~12–16px, pinaliit */
+  font-size: 13px;
+}
+
+.dashboard-table thead th {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.dashboard-table tbody td {
+  font-size: 13px;
+}
+
+/* ROW HEIGHT */
+.dashboard-table tr {
+  height: 40px;
+}
+
+/* OPTIONAL: mas subtle borders */
+.dashboard-table th,
+.dashboard-table td {
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+/* DASHBOARD TABLE ROW HEIGHT FIX */
+.dashboard-table tbody tr {
+  height: 40px;
+}
+
+/* make sure content naka-center vertically */
+.dashboard-table td,
+.dashboard-table th {
+  height: 40px;
+  vertical-align: middle;
+  padding: 6px 10px !important;
+}
+
+.register-three-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  align-items: start;
+}
+
+.register-section-card {
+  background: #eef6f7;
+  padding: 25px;
+  border-radius: 20px;
+  height: auto; /* remove fixed height feel */
+}
+
+.custom-input {
+  height: 45px;
+  border-radius: 20px;
+  padding: 0 15px;
+}
+
+.custom-label {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #2f4f4f;
+}
+
+/* FINAL REGISTRATION FIX */
+#registerPage .register-panel {
+  max-width: 1200px;
+  margin: 0;
+}
+
+#registerPage .register-three-layout {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 22px !important;
+}
+
+#registerPage .register-section-card {
+  width: 100% !important;
+  min-height: auto !important;
+  padding: 26px 28px !important;
+  background: #eefbfc !important;
+  border: 1px solid rgba(15, 109, 122, 0.14) !important;
+  border-radius: 24px !important;
+}
+
+#registerPage .form-grid-2 {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 16px 22px !important;
+}
+
+#registerPage .form-field {
+  width: 100% !important;
+}
+
+#registerPage .form-field.full {
+  grid-column: auto !important;
+}
+
+#registerPage .custom-label {
+  display: block !important;
+  margin-bottom: 6px !important;
+  color: #31525a !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+#registerPage .custom-input,
+#registerPage .dropdown-selected {
+  width: 100% !important;
+  min-height: 48px !important;
+  height: 48px !important;
+  padding: 10px 14px !important;
+  border-radius: 16px !important;
+}
+
+#registerPage .custom-dropdown {
+  margin-bottom: 0 !important;
+}
+
+#registerPage .age-row {
+  display: grid !important;
+  grid-template-columns: 1fr 110px !important;
+  gap: 10px !important;
+}
+
+#registerPage .register-submit-wrap-new {
+  max-width: 1150px !important;
+  margin: 22px auto 0 !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+}
+
+@media (max-width: 768px) {
+  #registerPage .form-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  #registerPage .age-row {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ===== APPOINTMENT PAGE NEW FLOW ===== */
+
+#registerPage .register-panel {
+  max-width: 1050px !important;
+  margin: 0 auto !important;
+}
+
+#appointmentForm .appointment-flow-card {
+  display: grid !important;
+  gap: 18px !important;
+}
+
+#appointmentForm .appointment-step {
+  padding: 24px !important;
+  background: #eefbfc !important;
+  border: 1px solid rgba(15, 109, 122, 0.14) !important;
+  border-radius: 24px !important;
+}
+
+#appointmentForm .step-subtitle {
+  margin-top: -10px;
+  margin-bottom: 14px;
+  color: #63757d;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.patient-id-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.patient-id-btn {
+  min-width: 72px;
+  min-height: 44px;
+  border: 1px solid #9edce5;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f6d7a;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.patient-id-btn:hover,
+.patient-id-btn.active {
+  background: #0f6d7a;
+  color: #ffffff;
+}
+
+.selected-patient-info {
+  margin-top: 18px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  background: #ffffff;
+  border: 1px solid #c8eef3;
+  border-radius: 18px;
+}
+
+.selected-patient-info div {
+  padding: 12px;
+  background: #f6fcfd;
+  border-radius: 14px;
+}
+
+.selected-patient-info span {
+  display: block;
+  color: #63757d;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase !important;
+}
+
+.selected-patient-info strong {
+  display: block;
+  color: #082f38;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+#appointmentForm .custom-input {
+  max-width: 420px;
+}
+
+#appointmentScheduleSection.hidden {
+  display: none !important;
+}
+
+#appointmentForm .appointment-calendar-card,
+#appointmentForm .appointment-slot-card {
+  box-shadow: none !important;
+}
+
+.appointment-submit-wrap {
+  margin-top: 22px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 992px) {
+  .selected-patient-info {
+    grid-template-columns: 1fr;
+  }
+
+  #appointmentForm .custom-input {
+    max-width: 100%;
+  }
+}
+
+#appointmentPage .appointment-panel .card-body {
+  padding-bottom: 34px !important;
+}
+
+.field-error,
+.field-error .dropdown-selected {
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.12) !important;
+}
+
+.field-valid,
+.field-valid .dropdown-selected {
+  border-color: #198754 !important;
+  box-shadow: 0 0 0 4px rgba(25, 135, 84, 0.12) !important;
+}
+
+/* FORCE REGISTRATION VALIDATION COLORS */
+
+#registerPage input.field-error,
+#registerPage select.field-error,
+#registerPage .custom-dropdown.field-error .dropdown-selected {
+  border: 2px solid #dc3545 !important;
+  box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.12) !important;
+}
+
+#registerPage input.field-valid,
+#registerPage select.field-valid,
+#registerPage .custom-dropdown.field-valid .dropdown-selected {
+  border: 2px solid #198754 !important;
+  box-shadow: 0 0 0 4px rgba(25, 135, 84, 0.12) !important;
+}
+
+/* wag isama patient ID sa validation color */
+#recordId {
+  border: 1px solid #a7dfe8 !important;
+  box-shadow: none !important;
+}
+
+/* DEFAULT: black/neutral border */
+#registerForm input,
+#registerForm select,
+#registerForm textarea,
+#registerForm .dropdown-selected {
+  border: 1px solid #000000 !important;
+  box-shadow: none !important;
+}
+
+/* RED ONLY AFTER REGISTER VALIDATION FAILED */
+#registerForm .field-error,
+#registerForm .field-error .dropdown-selected {
+  border: 2px solid #ff3b4f !important;
+  box-shadow: 0 0 0 4px rgba(255, 59, 79, 0.12) !important;
+}
+
+/* NO GREEN VALID BORDER */
+#registerForm .field-valid,
+#registerForm .field-valid .dropdown-selected {
+  border: 1px solid #000000 !important;
+  box-shadow: none !important;
+}
+
+/* Focus normal lang, hindi green */
+#registerForm input:focus,
+#registerForm select:focus,
+#registerForm textarea:focus,
+#registerForm .custom-dropdown.active .dropdown-selected {
+  border-color: #000000 !important;
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* UPCOMING APPOINTMENTS TABLE CLEAN FIX */
+#upcomingAppointmentsBody tr {
+  height: 52px !important;
+  border-bottom: 1px solid #e6f2f4 !important;
+}
+
+#upcomingAppointmentsBody td {
+  padding: 10px 16px !important;
+  font-size: 13px !important;
+  line-height: 1.25 !important;
+  vertical-align: middle !important;
+}
+
+#upcomingAppointmentsBody td:last-child {
+  text-align: left !important;
+}
+
+/* HEADER COMPACT FIX */
+#upcomingAppointmentsBody
+  .table thead th,
+#upcomingAppointmentsBody th,
+#dashboardPage .table thead th {
+  padding: 12px 16px !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+}
+
+/* UPCOMING APPOINTMENTS EDIT BUTTON - SAME AS ARCHIVE STYLE */
+#upcomingAppointmentsBody .btn,
+#upcomingAppointmentsBody .btn-sm,
+#upcomingAppointmentsBody .btn-primary {
+  min-width: 86px !important;
+  min-height: 38px !important;
+  padding: 8px 16px !important;
+
+  border: none !important;
+  border-radius: 14px !important;
+
+  background: #0f7f8c !important;
+  color: #ffffff !important;
+
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  box-shadow: none !important;
+}
+
+#upcomingAppointmentsBody .btn:hover,
+#upcomingAppointmentsBody .btn-sm:hover,
+#upcomingAppointmentsBody .btn-primary:hover {
+  background: #0b6f7a !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   GLOBAL TABLE + BUTTON CONSISTENCY FIX
+   Dashboard, Archived Appointments, Pet Records,
+   Archived Records, Inventory
+========================================================= */
+
+/* Table wrapper */
+.table-responsive {
+  border-radius: 18px !important;
+  border: 1px solid #d7eef2 !important;
+  background: #ffffff !important;
+  overflow-x: auto !important;
+}
+
+/* Main tables */
+.dashboard-table,
+.custom-table,
+.table {
+  width: 100% !important;
+  margin-bottom: 0 !important;
+  border-collapse: collapse !important;
+  table-layout: fixed !important;
+}
+
+/* Table header */
+.dashboard-table thead th,
+.custom-table thead th,
+.table thead th {
+  padding: 13px 16px !important;
+  background: #ecfbfd !important;
+  color: #31525a !important;
+  border-bottom: 1px solid #b8dfe6 !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  vertical-align: middle !important;
+}
+
+/* Table rows */
+.dashboard-table tbody tr,
+.custom-table tbody tr,
+.table tbody tr {
+  height: 54px !important;
+  border-bottom: 1px solid #e6f2f4 !important;
+}
+
+/* Table cells */
+.dashboard-table tbody td,
+.custom-table tbody td,
+.table tbody td {
+  padding: 11px 16px !important;
+  background: #ffffff !important;
+  color: #1f2933 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1.25 !important;
+  vertical-align: middle !important;
+  border-bottom: 1px solid #e6f2f4 !important;
+  white-space: normal !important;
+  word-break: normal !important;
+}
+
+/* Hover */
+.dashboard-table tbody tr:hover td,
+.custom-table tbody tr:hover td,
+.table tbody tr:hover td {
+  background: #f8fdfe !important;
+}
+
+/* Empty rows */
+.dashboard-table td[colspan],
+.custom-table td[colspan],
+.table td[colspan] {
+  padding: 22px 16px !important;
+  color: #63757d !important;
+  font-size: 13px !important;
+  text-align: center !important;
+}
+
+/* Checkbox column consistency */
+.checkbox-col {
+  width: 54px !important;
+  min-width: 54px !important;
+  max-width: 54px !important;
+  text-align: center !important;
+}
+
+.checkbox-col input,
+.custom-table input[type="checkbox"],
+.table input[type="checkbox"] {
+  width: 17px !important;
+  height: 17px !important;
+  min-height: 17px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  display: block !important;
+  accent-color: #0f7f8c !important;
+}
+
+/* Action column */
+.dashboard-table th:last-child,
+.dashboard-table td:last-child,
+.custom-table th:last-child,
+.custom-table td:last-child,
+.table th:last-child,
+.table td:last-child {
+  text-align: center !important;
+}
+
+/* Global action buttons */
+.btn-action,
+.dashboard-table .btn,
+.custom-table .btn,
+.table .btn,
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-outline-custom {
+  min-width: 92px !important;
+  min-height: 40px !important;
+  padding: 8px 16px !important;
+  border-radius: 14px !important;
+  border: none !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: none !important;
+}
+
+/* Primary/action color */
+.btn-action,
+.dashboard-table .btn-primary,
+.custom-table .btn-primary,
+.table .btn-primary,
+.dashboard-table .btn-action,
+.custom-table .btn-action,
+.table .btn-action {
+  background: #0f7f8c !important;
+  color: #ffffff !important;
+}
+
+.btn-action:hover,
+.dashboard-table .btn-primary:hover,
+.custom-table .btn-primary:hover,
+.table .btn-primary:hover,
+.dashboard-table .btn-action:hover,
+.custom-table .btn-action:hover,
+.table .btn-action:hover {
+  background: #0b6f7a !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+/* Success button */
+.dashboard-table .btn-success,
+.custom-table .btn-success,
+.table .btn-success,
+.btn-success {
+  background: #198754 !important;
+  color: #ffffff !important;
+}
+
+.dashboard-table .btn-success:hover,
+.custom-table .btn-success:hover,
+.table .btn-success:hover,
+.btn-success:hover {
+  background: #157347 !important;
+}
+
+/* Danger button */
+.dashboard-table .btn-danger,
+.custom-table .btn-danger,
+.table .btn-danger,
+.btn-danger {
+  background: #dc3545 !important;
+  color: #ffffff !important;
+}
+
+.dashboard-table .btn-danger:hover,
+.custom-table .btn-danger:hover,
+.table .btn-danger:hover,
+.btn-danger:hover {
+  background: #bb2d3b !important;
+}
+
+/* Secondary button */
+.dashboard-table .btn-secondary,
+.custom-table .btn-secondary,
+.table .btn-secondary,
+.btn-secondary {
+  background: #6b7280 !important;
+  color: #ffffff !important;
+}
+
+.dashboard-table .btn-secondary:hover,
+.custom-table .btn-secondary:hover,
+.table .btn-secondary:hover,
+.btn-secondary:hover {
+  background: #565e6a !important;
+}
+
+/* Smaller buttons should not become circles */
+.btn-sm,
+.dashboard-table .btn-sm,
+.custom-table .btn-sm,
+.table .btn-sm {
+  min-width: 82px !important;
+  min-height: 38px !important;
+  padding: 7px 14px !important;
+  border-radius: 13px !important;
+  font-size: 11px !important;
+}
+
+/* Top tools buttons consistency */
+.records-tools .btn,
+.inventory-tools .btn,
+.top-tools .btn,
+.archive-appointment-btn,
+#clearActivityLogsBtn,
+#exportArchivedAppointmentsBtn,
+#exportExcelBtn,
+#exportQrBtn,
+#retrieveArchivedRecordsBtn,
+#removeInventoryBtn {
+  min-width: 140px !important;
+  min-height: 46px !important;
+  padding: 10px 18px !important;
+  border-radius: 16px !important;
+  background: #0f7f8c !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  box-shadow: none !important;
+}
+
+.records-tools .btn:hover,
+.inventory-tools .btn:hover,
+.top-tools .btn:hover,
+.archive-appointment-btn:hover,
+#clearActivityLogsBtn:hover,
+#exportArchivedAppointmentsBtn:hover,
+#exportExcelBtn:hover,
+#exportQrBtn:hover,
+#retrieveArchivedRecordsBtn:hover,
+#removeInventoryBtn:hover {
+  background: #0b6f7a !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+/* Search inputs beside tables */
+.records-tools .search-box,
+.inventory-tools .search-box,
+.top-tools .search-box {
+  min-height: 46px !important;
+  border-radius: 16px !important;
+  font-size: 13px !important;
+}
+
+/* Badge/status consistency inside tables */
+.status-badge,
+.badge {
+  min-width: 86px !important;
+  padding: 7px 12px !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+}
+
+/* Dashboard activity table compact */
+.activity-table-scroll {
+  max-height: 360px !important;
+  height: 360px !important;
+}
+
+/* Prevent huge action buttons in modal headers */
+.patient-top-actions .btn,
+.modal .btn {
+  border-radius: 14px !important;
+}
+
+.action-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-toggle-btn {
+  min-width: 90px !important;
+}
+
+.action-dropdown-menu {
+  position: absolute;
+  top: 110%;
+  left: 50%;
+  min-width: 135px;
+  display: none;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #d7eef2;
+  border-radius: 14px;
+  box-shadow: 0 14px 35px rgba(15, 109, 122, 0.18);
+  transform: translateX(-50%);
+  z-index: 9999;
+}
+
+.action-dropdown.active .action-dropdown-menu {
+  display: block;
+}
+
+.action-dropdown-menu .dropdown-item {
+  width: 100%;
+  min-height: 38px;
+  padding: 10px 14px;
+  border: none;
+  background: #ffffff;
+  color: #0f7f8c;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.action-dropdown-menu .dropdown-item:hover {
+  background: #ecfbfd;
+  color: #0b6f7a;
+}
+
+.status-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.status-trigger {
+  min-width: 105px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 14px;
+  background: #eefbfc;
+  color: #12363d;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.status-menu {
+  position: absolute;
+  top: 110%;
+  left: 50%;
+  z-index: 9999;
+  min-width: 135px;
+  display: none;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #d7eef2;
+  border-radius: 14px;
+  box-shadow: 0 14px 35px rgba(15, 109, 122, 0.18);
+  transform: translateX(-50%);
+}
+
+.status-dropdown.active .status-menu {
+  display: block;
+}
+
+.status-menu button {
+  width: 100%;
+  min-height: 38px;
+  padding: 10px 14px;
+  border: none;
+  background: #ffffff;
+  color: #0f7f8c;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.status-menu button:hover {
+  background: #ecfbfd;
+}
+
+
+/* FINAL TABLE ACTION BUTTON ALIGNMENT FIX */
+table th,
+table td {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+/* Action column only */
+table td:last-child,
+table th:last-child {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+/* DO NOT make td flex */
+table td:last-child {
+  display: table-cell !important;
+}
+
+/* Center button inside action column */
+table td:last-child .btn,
+table td:last-child button,
+table td:last-child a {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto !important;
+  min-height: 38px !important;
+  line-height: 1 !important;
+}
+
+/* Fix row alignment */
+table td {
+  vertical-align: middle !important;
+  padding-top: 18px !important;
+  padding-bottom: 18px !important;
+}
+
+/* Action column */
+table td:last-child {
+  text-align: center !important;
+}
+
+/* EDIT button fix */
+table td:last-child .btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 40px !important;
+  line-height: 1 !important;
+  margin: 0 auto !important;
+}
+
+/* FORCE FIX EDIT BUTTON CENTER */
+table td:last-child {
+  text-align: center !important;
+  vertical-align: middle !important;
+  padding: 0 !important;
+}
+
+/* FORCE ROW HEIGHT */
+table tr {
+  height: 80px !important;
+}
+
+/* FORCE BUTTON CENTER */
+table td:last-child .btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 45px !important;
+  margin: auto !important;
+}
+
+/* ===== NUCLEAR TABLE FIX ===== */
+
+/* Reset table cell behavior */
+table td,
+table th {
+  display: table-cell !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+}
+
+/* Remove all weird padding na nagpapataas */
+table td {
+  padding: 12px !important;
+}
+
+/* Force consistent row height */
+table tr {
+  height: 70px !important;
+}
+
+/* Action column FIX (EDIT button) */
+table td:last-child {
+  padding: 0 !important;
+  text-align: center !important;
+}
+
+/* CENTER THE BUTTON PERFECTLY */
+table td:last-child > * {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: auto !important;
+  height: 100% !important;
+}
+
+/* Fix button itself */
+table td:last-child .btn {
+  height: 40px !important;
+  padding: 0 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.action-td {
+  padding: 0 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.action-cell {
+  width: 100%;
+  min-height: 72px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.action-cell .btn {
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 22px !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.dashboard-search {
+  max-width: 280px !important;
+  min-height: 46px !important;
+  border-radius: 999px !important;
+  padding: 10px 18px !important;
+}
+
+.dashboard-header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.dashboard-search {
+  width: 260px !important;
+  min-height: 44px !important;
+  border-radius: 999px !important;
+  border: 2px solid #222 !important;
+  padding: 0 16px !important;
+}
+
+/* container */
+.dashboard-header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* push button right */
+  margin-bottom: 15px;
+}
+
+/* search bar */
+.dashboard-search {
+  width: 260px;
+  height: 46px;
+  border-radius: 999px;
+  border: 2px solid #222;
+  padding: 0 18px;
+  font-size: 14px;
+  outline: none;
+}
+
+/* para hindi lumawak yung search sa rebooking */
+.dashboard-header-controls input {
+  flex: 0 0 auto;
+}
+
+.dashboard-header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* 👉 force right side */
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+/* Force same style as edit buttons */
+.btn-action.archive-appointment-btn {
+  border-radius: 12px !important;
+  min-height: 52px !important;
+  padding: 0 20px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Archive Appointment = same shape as Edit button */
+#dashboardPage #archiveAppointmentBtn.archive-appointment-btn {
+  border-radius: 10px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 20px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  font-size: 12px !important;
+  line-height: 1 !important;
+}
+
+.splash-link,
+.splash-link:visited,
+.splash-link:hover,
+.splash-link:active {
+  text-decoration: none;
+  color: inherit;
+}
+
+.dropdown-link-btn {
+  transition: all 0.25s ease;
+  border-radius: 12px;
+}
+
+.dropdown-link-btn:hover {
+  background: #ffffff;
+  transform: scale(1.02); /* subtle zoom */
+}
+
+/* ===============================
+   APPOINTMENT LOGS PAGE
+================================ */
+
+.appointment-logs-header h1 {
+  margin-bottom: 6px !important;
+}
+
+.logs-filter-card {
+  margin-bottom: 18px;
+  padding: 28px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(15, 109, 122, 0.12);
+  border-radius: 30px;
+  box-shadow: var(--shadow-soft);
+}
+
+.logs-filter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.5fr auto;
+  gap: 22px;
+  align-items: end;
+}
+
+.logs-filter-grid label {
+  margin-bottom: 8px;
+  color: #12363d;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase !important;
+}
+
+.logs-export-btn {
+  min-width: 180px;
+  height: 56px;
+  white-space: nowrap;
+}
+
+.appointment-logs-card {
+  overflow: hidden;
+}
+
+.logs-table-scroll {
+  max-height: 650px;
+  overflow-y: auto;
+  overflow-x: auto;
+  border: 1px solid rgba(15, 109, 122, 0.14);
+  border-radius: 22px;
+  background: #ffffff;
+}
+
+.logs-table-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.logs-table-scroll::-webkit-scrollbar-thumb {
+  background: #9bb6bd;
+  border-radius: 999px;
+}
+
+.logs-table-scroll::-webkit-scrollbar-track {
+  background: #edf7f9;
+  border-radius: 999px;
+}
+
+.appointment-logs-table {
+  min-width: 1200px;
+}
+
+.appointment-logs-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.appointment-logs-table td {
+  height: 82px;
+}
+
+.status-log-finished {
+  display: inline-block;
+  padding: 7px 12px;
+  background: #e9f7ef;
+  color: #198754;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.log-notes-cell {
+  max-width: 230px;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.logs-footer {
+  position: relative;
+  min-height: 48px;
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.logs-showing-text {
+  color: #31525a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.logs-pagination {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.logs-page-btn {
+  min-width: 42px;
+  height: 42px;
+  border: 1px solid #cde6eb;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #12363d;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.logs-page-btn:hover {
+  background: #eefbfc;
+}
+
+.logs-page-btn.active {
+  background: #0f8b99;
+  color: #ffffff;
+  border-color: #0f8b99;
+}
+
+.logs-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1200px) {
+  .logs-filter-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .logs-export-btn {
+    width: 100%;
+  }
+
+  .logs-pagination {
+    position: static;
+    transform: none;
+    margin-left: auto;
+  }
+}
+
+.logs-table-scroll {
+  position: relative;
+}
+
+.logs-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(3px);
+  border-radius: 22px;
+}
+
+.logs-loading-overlay.show {
+  display: flex;
+}
+
+.logs-loader {
+  width: 42px;
+  height: 42px;
+  border: 4px solid #d8f1f4;
+  border-top-color: #0f8b99;
+  border-radius: 50%;
+  animation: logsSpin 0.7s linear infinite;
+}
+
+@keyframes logsSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

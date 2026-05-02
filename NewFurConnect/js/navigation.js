@@ -15,25 +15,25 @@ function initializeSidebarDropdowns() {
       event.preventDefault();
       event.stopPropagation();
 
+      const isOpen = dropdown.classList.contains("open");
+
       dropdowns.forEach((item) => {
-        if (item !== dropdown) {
-          item.classList.remove("open");
-        }
+        item.classList.remove("open");
       });
 
-      dropdown.classList.toggle("open");
+      if (!isOpen) {
+        dropdown.classList.add("open");
+      }
+    });
+
+    dropdown.addEventListener("click", function (event) {
+      event.stopPropagation();
     });
   });
 
   document.addEventListener("click", function () {
     dropdowns.forEach((dropdown) => {
       dropdown.classList.remove("open");
-    });
-  });
-
-  dropdowns.forEach((dropdown) => {
-    dropdown.addEventListener("click", function (event) {
-      event.stopPropagation();
     });
   });
 }

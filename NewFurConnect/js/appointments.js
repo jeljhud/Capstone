@@ -1,39 +1,66 @@
 document.addEventListener("DOMContentLoaded", function () {
-  updateRecordIdField();
-  initializeCustomDropdowns();
+  loadPatientRecords();
+  renderPatientIdList();
   initializeAppointmentCalendar();
   initializeAppointmentEvents();
 });
 
-/* TEMP DATA ONLY — papalitan later ng Firebase */
 let patientRecords = [];
 let selectedSlots = [];
-
+let selectedPatient = null;
 let currentCalendarDate = new Date();
 
-/* ================= HELPERS ================= */
+/* NOTIFICATION */
+function showNotification(message, type = "success") {
+  const container = document.getElementById("notificationContainer");
+  if (!container) return;
 
-function getNextRecordId() {
-  if (patientRecords.length === 0) return 1;
+  const notif = document.createElement("div");
+  notif.className = `notif ${type}`;
+  notif.innerHTML = `
+    <span>${message}</span>
+  `;
 
-  return patientRecords.reduce((max, record) => {
-    return Math.max(max, parseInt(record.id, 10) || 0);
-  }, 0) + 1;
+  container.appendChild(notif);
+
+  setTimeout(() => {
+    notif.classList.add("show");
+  }, 10);
+
+  setTimeout(() => {
+    notif.classList.remove("show");
+    setTimeout(() => notif.remove(), 300);
+  }, 3000);
+
+  notif.querySelector(".notif-close")?.addEventListener("click", function () {
+    notif.remove();
+  });
 }
 
-function updateRecordIdField() {
-  const recordIdInput = document.getElementById("recordId");
-
-  if (recordIdInput) {
-    recordIdInput.value = getNextRecordId();
-  }
+/* TEMP DATA ONLY - no localStorage */
+function loadPatientRecords() {
+  patientRecords = [
+    {
+      id: 1,
+      ownerName: "Sample Owner",
+      contactNumber: "09123456789",
+      email: "sample@gmail.com",
+      petName: "Sample Pet",
+      petSpecies: "Dog",
+      breed: "Asp aspin",
+      age: "2 Years",
+      gender: "Male",
+      weight: "10",
+      appointmentArchived: false
+    }
+  ];
 }
 
+/* FORMATTERS */
 function formatDateKey(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-
   return `${year}-${month}-${day}`;
 }
 
@@ -47,16 +74,14 @@ function formatSlotLabel(timeValue) {
   return `${displayHour}:${minutes} ${ampm}`;
 }
 
+/* SLOTS */
 function getClinicTimeSlots() {
   const slots = [];
   let hour = 9;
   let minute = 0;
 
   while (hour < 17 || (hour === 17 && minute === 0)) {
-    const formattedHour = String(hour).padStart(2, "0");
-    const formattedMinute = String(minute).padStart(2, "0");
-
-    slots.push(`${formattedHour}:${formattedMinute}`);
+    slots.push(`${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
 
     minute += 30;
 
@@ -69,82 +94,100 @@ function getClinicTimeSlots() {
   return slots;
 }
 
-function isAppointmentSlotTaken(appointmentDate, appointmentTime) {
-  if (!appointmentDate || !appointmentTime) return false;
+function getServiceDurationSlots(serviceType) {
+  switch (serviceType) {
+    case "Grooming":
+      return 3;
+    case "Deworming":
+      return 1;
+    case "Vaccination":
+      return 1;
+    case "Surgery":
+      return 0;
+    default:
+      return 1;
+  }
+}
 
+function isAppointmentSlotTaken(appointmentDate, appointmentTime) {
   return patientRecords.some((record) => {
     if (record.appointmentDate !== appointmentDate) return false;
 
     const takenSlots = String(record.appointmentTime || "")
       .split(",")
-      .map((time) => time.trim());
+      .map(time => time.trim())
+      .filter(Boolean);
 
     return takenSlots.includes(appointmentTime);
   });
 }
 
-/* ================= CUSTOM DROPDOWNS ================= */
+function canAutoSelectSlots(date, startIndex, neededSlots, clinicSlots) {
+  for (let i = 0; i < neededSlots; i++) {
+    const slot = clinicSlots[startIndex + i];
 
-function initializeCustomDropdowns() {
-  setupCustomDropdown("petSpeciesDropdown", "petSpecies");
-  setupCustomDropdown("genderDropdown", "gender");
+    if (!slot) return false;
+    if (isAppointmentSlotTaken(date, slot)) return false;
+  }
+
+  return true;
 }
 
-function setupCustomDropdown(dropdownId, hiddenInputId) {
-  const dropdown = document.getElementById(dropdownId);
-  const hiddenInput = document.getElementById(hiddenInputId);
+/* PATIENT SELECT */
+function renderPatientIdList() {
+  const select = document.getElementById("patientSelect");
+  if (!select) return;
 
-  if (!dropdown || !hiddenInput) return;
+  select.innerHTML = `<option value="">Select Patient ID</option>`;
 
-  const selected = dropdown.querySelector(".dropdown-selected");
-  const options = dropdown.querySelectorAll(".dropdown-options div");
-
-  selected.addEventListener("click", function () {
-    dropdown.classList.toggle("active");
+  patientRecords.forEach((record) => {
+    const option = document.createElement("option");
+    option.value = record.id;
+    option.textContent = `ID ${record.id}`;
+    select.appendChild(option);
   });
 
-  options.forEach((option) => {
-    option.addEventListener("click", function () {
-      const value = option.dataset.value;
+  select.addEventListener("change", function () {
+    const record = patientRecords.find(r => String(r.id) === String(select.value));
 
-      hiddenInput.value = value;
-      selected.innerHTML = `${value} <span class="arrow">▼</span>`;
-
-      dropdown.classList.remove("active");
-      dropdown.classList.remove("invalid");
-      dropdown.classList.add("valid");
-    });
-  });
-
-  document.addEventListener("click", function (event) {
-    if (!dropdown.contains(event.target)) {
-      dropdown.classList.remove("active");
+    if (!record) {
+      selectedPatient = null;
+      document.getElementById("selectedPatientInfo")?.classList.add("hidden");
+      return;
     }
+
+    selectPatient(record);
   });
 }
 
-/* ================= CALENDAR ================= */
+function selectPatient(record) {
+  selectedPatient = record;
 
+  document.getElementById("selectedPatientId").value = record.id;
+  document.getElementById("viewPatientId").textContent = record.id || "-";
+  document.getElementById("viewPetName").textContent = record.petName || "-";
+  document.getElementById("viewOwnerName").textContent = record.ownerName || "-";
+  document.getElementById("viewPetSpecies").textContent = record.petSpecies || "-";
+  document.getElementById("viewBreed").textContent = record.breed || "-";
+  document.getElementById("viewContactNumber").textContent = record.contactNumber || "-";
+
+  document.getElementById("selectedPatientInfo")?.classList.remove("hidden");
+}
+
+/* CALENDAR */
 function initializeAppointmentCalendar() {
   renderAppointmentCalendar();
   renderAppointmentTimeSlots();
 
-  const prevBtn = document.getElementById("prevCalendarMonth");
-  const nextBtn = document.getElementById("nextCalendarMonth");
+  document.getElementById("prevCalendarMonth")?.addEventListener("click", function () {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+    renderAppointmentCalendar();
+  });
 
-  if (prevBtn) {
-    prevBtn.addEventListener("click", function () {
-      currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
-      renderAppointmentCalendar();
-    });
-  }
-
-  if (nextBtn) {
-    nextBtn.addEventListener("click", function () {
-      currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
-      renderAppointmentCalendar();
-    });
-  }
+  document.getElementById("nextCalendarMonth")?.addEventListener("click", function () {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+    renderAppointmentCalendar();
+  });
 }
 
 function renderAppointmentCalendar() {
@@ -180,6 +223,8 @@ function renderAppointmentCalendar() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  const totalSlots = getClinicTimeSlots().length;
+
   for (let day = 1; day <= lastDay.getDate(); day++) {
     const date = new Date(year, month, day);
     const dateKey = formatDateKey(date);
@@ -188,24 +233,30 @@ function renderAppointmentCalendar() {
     button.type = "button";
     button.className = "calendar-day";
 
-    const totalSlots = getClinicTimeSlots().length;
-    const takenSlots = getClinicTimeSlots().filter((slot) =>
+    const takenSlots = getClinicTimeSlots().filter(slot =>
       isAppointmentSlotTaken(dateKey, slot)
     ).length;
 
-    const availableSlots = totalSlots - takenSlots;
+    const isPastDate = date < today;
+    const isFullSlots = takenSlots >= totalSlots;
 
-    if (availableSlots <= 0) {
+    if (isPastDate) {
+      button.classList.add("disabled");
+      button.disabled = true;
+      button.innerHTML = `
+        <strong>${day}</strong>
+        <small>Past Date</small>
+      `;
+      daysContainer.appendChild(button);
+      continue;
+    }
+
+    if (isFullSlots) {
       button.classList.add("red");
-    } else if (availableSlots <= 5) {
+    } else if (totalSlots - takenSlots <= 5) {
       button.classList.add("yellow");
     } else {
       button.classList.add("green");
-    }
-
-    if (date < today) {
-      button.classList.add("disabled");
-      button.disabled = true;
     }
 
     if (selectedDateInput?.value === dateKey) {
@@ -214,27 +265,23 @@ function renderAppointmentCalendar() {
 
     button.innerHTML = `
       <strong>${day}</strong>
-      <small>${availableSlots} slots</small>
+      <small>${isFullSlots ? "Full Slots" : `${takenSlots}/${totalSlots}`}</small>
     `;
 
     button.addEventListener("click", function () {
-      if (button.disabled) return;
+      if (button.disabled || isFullSlots) return;
 
       selectedSlots = [];
+      selectedDateInput.value = dateKey;
 
-      if (selectedDateInput) selectedDateInput.value = dateKey;
+      selectedDateText.textContent = date.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+      }).toUpperCase();
 
-      if (selectedDateText) {
-        selectedDateText.textContent = date.toLocaleDateString("en-US", {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-          year: "numeric"
-        });
-      }
-
-      const appointmentTimeInput = document.getElementById("appointmentTime");
-      if (appointmentTimeInput) appointmentTimeInput.value = "";
+      document.getElementById("appointmentTime").value = "";
 
       renderAppointmentCalendar();
       renderAppointmentTimeSlots();
@@ -248,27 +295,27 @@ function renderAppointmentTimeSlots() {
   const appointmentDateInput = document.getElementById("appointmentDate");
   const appointmentTimeInput = document.getElementById("appointmentTime");
   const appointmentTimeSlots = document.getElementById("appointmentTimeSlots");
+  const appointmentType = document.getElementById("appointmentType")?.value;
 
   if (!appointmentDateInput || !appointmentTimeInput || !appointmentTimeSlots) return;
 
-  const selectedDate = appointmentDateInput.value;
-
   appointmentTimeSlots.innerHTML = "";
 
-  if (!selectedDate) {
-    appointmentTimeSlots.innerHTML = `
-      <p class="text-muted mb-0">Please select a date first.</p>
-    `;
+  if (!appointmentDateInput.value) {
+    appointmentTimeSlots.innerHTML = `<p class="text-muted mb-0">Please select a date first.</p>`;
     return;
   }
 
-  getClinicTimeSlots().forEach((timeValue) => {
+  const clinicSlots = getClinicTimeSlots();
+  const neededSlots = getServiceDurationSlots(appointmentType);
+
+  clinicSlots.forEach((timeValue, index) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "time-slot-btn";
     button.textContent = formatSlotLabel(timeValue);
 
-    const isTaken = isAppointmentSlotTaken(selectedDate, timeValue);
+    const isTaken = isAppointmentSlotTaken(appointmentDateInput.value, timeValue);
 
     if (isTaken) {
       button.disabled = true;
@@ -282,199 +329,99 @@ function renderAppointmentTimeSlots() {
     button.addEventListener("click", function () {
       if (isTaken) return;
 
-      if (selectedSlots.includes(timeValue)) {
-        selectedSlots = selectedSlots.filter((slot) => slot !== timeValue);
-        button.classList.remove("active");
-      } else {
-        selectedSlots.push(timeValue);
-        button.classList.add("active");
+      if (appointmentType === "Surgery") {
+        if (selectedSlots.includes(timeValue)) {
+          selectedSlots = selectedSlots.filter(slot => slot !== timeValue);
+        } else {
+          selectedSlots.push(timeValue);
+        }
+
+        appointmentTimeInput.value = selectedSlots.join(",");
+        renderAppointmentTimeSlots();
+        return;
       }
 
+      if (!canAutoSelectSlots(appointmentDateInput.value, index, neededSlots, clinicSlots)) {
+        showNotification("Not enough available slots.", "warning");
+        selectedSlots = [];
+        appointmentTimeInput.value = "";
+        renderAppointmentTimeSlots();
+        return;
+      }
+
+      selectedSlots = clinicSlots.slice(index, index + neededSlots);
       appointmentTimeInput.value = selectedSlots.join(",");
+
+      renderAppointmentTimeSlots();
     });
 
     appointmentTimeSlots.appendChild(button);
   });
 }
 
-/* ================= VALIDATION ================= */
+/* EVENTS */
+function initializeAppointmentEvents() {
+  const appointmentType = document.getElementById("appointmentType");
+  const scheduleSection = document.getElementById("appointmentScheduleSection");
+  const setAppointmentBtn = document.getElementById("setAppointmentBtn");
 
-function validateAppointmentForm(data) {
-  const lettersOnly = /^[A-Za-z\s]+$/;
-  const gmailOnly = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+  appointmentType?.addEventListener("change", function () {
+    selectedSlots = [];
+    document.getElementById("appointmentTime").value = "";
 
-  if (
-    !data.id ||
-    !data.ownerName ||
-    !data.contactNumber ||
-    !data.email ||
-    !data.petName ||
-    !data.petSpecies ||
-    !data.breed ||
-    !data.age ||
-    !data.ageUnit ||
-    !data.gender ||
-    !data.weight ||
-    !data.appointmentDate ||
-    !data.appointmentTime ||
-    !data.appointmentType
-  ) {
-    alert("Please fill in all fields and select appointment slot.");
-    return false;
-  }
+    if (appointmentType.value) {
+      scheduleSection.classList.remove("hidden");
+    } else {
+      scheduleSection.classList.add("hidden");
+    }
 
-  if (
-    !lettersOnly.test(data.petName) ||
-    !lettersOnly.test(data.breed) ||
-    !lettersOnly.test(data.ownerName)
-  ) {
-    alert("Pet name, breed, and owner name must contain letters only.");
-    return false;
-  }
+    renderAppointmentTimeSlots();
+  });
 
-  if (!/^\d+$/.test(data.contactNumber)) {
-    alert("Contact number must contain numbers only.");
-    return false;
-  }
-
-  if (!/^\d+$/.test(data.age)) {
-    alert("Age must contain numbers only.");
-    return false;
-  }
-
-  if (!/^\d+(\.\d+)?$/.test(data.weight)) {
-    alert("Weight must be a valid number.");
-    return false;
-  }
-
-  if (!gmailOnly.test(data.email)) {
-    alert("Only @gmail.com emails are allowed.");
-    return false;
-  }
-
-  return true;
-}
-
-/* ================= SUBMIT ================= */
-
-function getAppointmentFormData() {
-  return {
-    id: parseInt(document.getElementById("recordId")?.value, 10),
-    ownerName: document.getElementById("ownerName")?.value.trim(),
-    contactNumber: document.getElementById("contactNumber")?.value.trim(),
-    email: document.getElementById("email")?.value.trim(),
-    petName: document.getElementById("petName")?.value.trim(),
-    petSpecies: document.getElementById("petSpecies")?.value.trim(),
-    breed: document.getElementById("breed")?.value.trim(),
-    age: document.getElementById("age")?.value.trim(),
-    ageUnit: document.getElementById("ageUnit")?.value.trim(),
-    gender: document.getElementById("gender")?.value.trim(),
-    weight: document.getElementById("weight")?.value.trim(),
-    appointmentDate: document.getElementById("appointmentDate")?.value,
-    appointmentTime:
-      selectedSlots.length > 0
-        ? selectedSlots.join(",")
-        : document.getElementById("appointmentTime")?.value,
-    appointmentType: document.getElementById("appointmentType")?.value.trim()
-  };
+  setAppointmentBtn?.addEventListener("click", setAppointment);
 }
 
 function setAppointment() {
-  const data = getAppointmentFormData();
-
-  if (!validateAppointmentForm(data)) return;
-
-  const selectedTimeList = data.appointmentTime
-    .split(",")
-    .map((time) => time.trim());
-
-  const hasTakenSlot = selectedTimeList.some((time) =>
-    isAppointmentSlotTaken(data.appointmentDate, time)
-  );
-
-  if (hasTakenSlot) {
-    alert("One of the selected appointment slots is already taken.");
+  if (!selectedPatient) {
+    showNotification("Please select a patient ID first.", "error");
     return;
   }
 
-  const newRecord = {
-    id: data.id,
-    recordUid: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    ownerName: data.ownerName,
-    contactNumber: data.contactNumber,
-    email: data.email,
-    petName: data.petName,
-    petSpecies: data.petSpecies,
-    breed: data.breed,
-    age: `${data.age} ${data.ageUnit}`,
-    gender: data.gender,
-    weight: data.weight,
-    appointmentDate: data.appointmentDate,
-    appointmentTime: data.appointmentTime,
-    nextAppointmentDate: "",
-    nextAppointmentTime: "",
-    appointmentType: data.appointmentType,
+  const appointmentType = document.getElementById("appointmentType").value;
+  const appointmentDate = document.getElementById("appointmentDate").value;
+  const appointmentTime = document.getElementById("appointmentTime").value;
+
+  if (!appointmentType || !appointmentDate || !appointmentTime) {
+    showNotification("Please select service, date, and time.", "error");
+    return;
+  }
+
+  const index = patientRecords.findIndex(r => String(r.id) === String(selectedPatient.id));
+
+  if (index === -1) {
+    showNotification("Patient record not found.", "error");
+    return;
+  }
+
+  patientRecords[index] = {
+    ...patientRecords[index],
+    appointmentDate,
+    appointmentTime,
+    appointmentType,
     appointmentStatus: "Waiting",
-    inventoryDeducted: false,
-    totalVisits: "",
-    internalNotes: "",
-    petImage: "",
-    medicalHistory: [],
     appointmentArchived: false
   };
 
-  patientRecords.push(newRecord);
-
-  alert("Appointment set successfully!");
+  showNotification("Appointment set successfully!", "success");
 
   selectedSlots = [];
+  selectedPatient = null;
 
-  const registerForm = document.getElementById("registerForm");
-  if (registerForm) registerForm.reset();
+  document.getElementById("appointmentForm").reset();
+  document.getElementById("selectedPatientInfo")?.classList.add("hidden");
+  document.getElementById("appointmentScheduleSection")?.classList.add("hidden");
 
-  const appointmentTimeInput = document.getElementById("appointmentTime");
-  if (appointmentTimeInput) appointmentTimeInput.value = "";
-
-  updateRecordIdField();
+  renderPatientIdList();
   renderAppointmentCalendar();
   renderAppointmentTimeSlots();
-}
-
-/* ================= EVENTS ================= */
-
-function initializeAppointmentEvents() {
-  const setAppointmentBtn = document.getElementById("setAppointmentBtn");
-
-  if (setAppointmentBtn) {
-    setAppointmentBtn.addEventListener("click", setAppointment);
-  }
-
-  ["petName", "breed", "ownerName"].forEach((id) => {
-    const input = document.getElementById(id);
-    if (!input) return;
-
-    input.addEventListener("input", function () {
-      this.value = this.value.replace(/[^A-Za-z\s]/g, "");
-    });
-  });
-
-  ["age", "weight", "contactNumber"].forEach((id) => {
-    const input = document.getElementById(id);
-    if (!input) return;
-
-    input.addEventListener("input", function () {
-      this.value = this.value.replace(/[^0-9.]/g, "");
-    });
-  });
-
-  const emailInput = document.getElementById("email");
-
-  if (emailInput) {
-    emailInput.addEventListener("blur", function () {
-      if (this.value && !this.value.endsWith("@gmail.com")) {
-        alert("Only @gmail.com emails are allowed.");
-        this.value = "";
-      }
-    });
-  }
 }

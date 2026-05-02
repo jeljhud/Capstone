@@ -30,8 +30,9 @@
             </button>
 
             <div class="appointment-dropdown-menu">
-              <a href="appointments.html" class="dropdown-link-btn active">Registration</a>
-              <a href="archived-appointments.html" class="dropdown-link-btn">Archived Appointment</a>
+              <a href="registration.html" class="dropdown-link-btn">Registration</a>
+              <a href="appointments.html" class="dropdown-link-btn active">Appointments</a>
+              <a href="appointment-logs.html" class="dropdown-link-btn">Appointment Logs</a>
             </div>
           </div>
 
@@ -42,7 +43,7 @@
             </button>
 
             <div class="appointment-dropdown-menu">
-              <a href="records.html" class="dropdown-link-btn">Active Records</a>
+              <a href="records.html" class="dropdown-link-btn">Pet Records</a>
               <a href="archived-records.html" class="dropdown-link-btn">Archived Records</a>
             </div>
           </div>
@@ -66,132 +67,121 @@
           </div> -->
 
           <div class="logout-wrap">
-            <a href="login.html" id="logoutBtn" class="btn btn-danger w-100">Logout</a>
+            <a href="login.html" id="logoutBtn" class="btn btn-light nav-btn-custom">Logout</a>
           </div>
         </div>
       </nav>
 
+
       <main class="page-area p-4 p-lg-5">
 
-        <section id="registerPage" class="internal-page">
+        <section id="appointmentPage" class="internal-page">
           <div class="page-title-wrap">
-            <h1 class="display-6">Register Your Pet</h1>
+            <h1 class="display-6">Schedule an Appointment</h1>
             <p class="fs-5">Please fill all the information to set appointments</p>
           </div>
 
-          <div class="card register-panel">
+          <div class="card appointment-panel">
             <div class="card-body p-4 p-md-5">
-              <form id="registerForm">
-                <input type="hidden" id="appointmentDate" required>
-                <input type="hidden" id="appointmentTime" required>
+<form id="appointmentForm">
+  <input type="hidden" id="selectedPatientId">
+  <input type="hidden" id="appointmentDate" required>
+  <input type="hidden" id="appointmentTime" required>
 
-                <div class="register-three-layout">
+  <div class="appointment-flow-card">
 
-                  <div class="register-section-card">
-                    <div class="section-title">Pet's Information</div>
+    <div class="appointment-step">
+      <div class="section-title">Select Patient</div>
+      <p class="step-subtitle">Select a patient ID to view information</p>
 
-                    <input id="recordId" class="form-control custom-input mb-3" type="text" placeholder="Patient ID" readonly>
+      <select id="patientSelect" class="form-select custom-input">
+  <option value="">Select Patient ID</option>
+</select>
 
-                    <input id="petName" class="form-control custom-input mb-3" type="text" placeholder="Pet Name" pattern="[A-Za-z\s]+" title="Letters only" required>
+      <div id="selectedPatientInfo" class="selected-patient-info hidden">
+        <div>
+          <span>Patient ID</span>
+          <strong id="viewPatientId">-</strong>
+        </div>
+        <div>
+          <span>Pet Name</span>
+          <strong id="viewPetName">-</strong>
+        </div>
+        <div>
+          <span>Owner</span>
+          <strong id="viewOwnerName">-</strong>
+        </div>
+        <div>
+          <span>Species</span>
+          <strong id="viewPetSpecies">-</strong>
+        </div>
+        <div>
+          <span>Breed</span>
+          <strong id="viewBreed">-</strong>
+        </div>
+        <div>
+          <span>Contact</span>
+          <strong id="viewContactNumber">-</strong>
+        </div>
+      </div>
+    </div>
 
-                    <div class="custom-dropdown" id="petSpeciesDropdown">
-                      <div class="dropdown-selected">
-                        Select Pet Species <span class="arrow">▼</span>
-                      </div>
-                      <div class="dropdown-options">
-                        <div data-value="Dog">Dog</div>
-                        <div data-value="Cat">Cat</div>
-                      </div>
-                    </div>
-                    <input type="hidden" id="petSpecies">
+    <div class="appointment-step">
+      <div class="section-title">Select Service</div>
+      <p class="step-subtitle">Choose appointment service first</p>
 
-                    <input id="breed" class="form-control custom-input mb-3" type="text" placeholder="Breed" pattern="[A-Za-z\s]+" title="Letters only" required>
+      <select id="appointmentType" class="form-select custom-input" required>
+        <option value="">Select Service</option>
+        <option value="Grooming">Grooming</option>
+        <option value="Vaccination">Vaccination</option>
+        <option value="Deworming">Deworming</option>
+        <option value="Surgery">Surgery</option>
+      </select>
+    </div>
 
-                    <div class="d-flex gap-2 mb-3">
-                      <input id="age" class="form-control custom-input" type="number" placeholder="Age" min="0" required>
+    <div id="appointmentScheduleSection" class="appointment-step hidden">
+      <div class="section-title">Select Date & Time</div>
 
-                      <select id="ageUnit" class="form-select custom-input" style="max-width:120px;" required>
-                        <option value="Months">Months</option>
-                        <option value="Years">Years</option>
-                      </select>
-                    </div>
+      <div class="appointment-calendar-card">
+        <div class="appointment-calendar-head">
+          <button type="button" id="prevCalendarMonth" class="calendar-nav-btn">‹</button>
 
-                    <div class="custom-dropdown" id="genderDropdown">
-                      <div class="dropdown-selected">
-                        Select Gender <span class="arrow">▼</span>
-                      </div>
-                      <div class="dropdown-options">
-                        <div data-value="Male">Male</div>
-                        <div data-value="Female">Female</div>
-                      </div>
-                    </div>
-                    <input type="hidden" id="gender">
+          <div>
+            <h4 id="calendarMonthLabel">April 2026</h4>
+            <p>Choose appointment date</p>
+          </div>
 
-                    <input id="weight" class="form-control custom-input" type="number" placeholder="Weight (kg)" min="0" step="0.01" required>
-                  </div>
+          <button type="button" id="nextCalendarMonth" class="calendar-nav-btn">›</button>
+        </div>
 
-                  <div class="register-section-card">
-                    <div class="section-title">Owner's Information</div>
+        <div class="calendar-weekdays">
+          <span>MON</span>
+          <span>TUE</span>
+          <span>WED</span>
+          <span>THU</span>
+          <span>FRI</span>
+          <span>SAT</span>
+          <span>SUN</span>
+        </div>
 
-                    <input id="ownerName" class="form-control custom-input mb-3" type="text" placeholder="Owner Name" pattern="[A-Za-z\s]+" title="Letters only" required>
+        <div id="appointmentCalendarDays" class="appointment-calendar-days"></div>
+      </div>
 
-                    <input id="contactNumber" class="form-control custom-input mb-3" type="number" placeholder="Contact Number" required>
+      <div class="appointment-slot-card mt-3">
+        <h4>Available Slots</h4>
+        <p id="appointmentSelectedDateText">Select a date to view slots</p>
+        <div id="appointmentTimeSlots" class="appointment-time-slots calendar-slots"></div>
+      </div>
+    </div>
 
-                    <input id="email" class="form-control custom-input" type="email" placeholder="Email" pattern="^[a-zA-Z0-9._%+-]+@gmail\.com$" title="Only @gmail.com emails are allowed" required>
-                  </div>
+  </div>
 
-                  <div class="register-section-card appointment-section-card">
-                    <div class="section-title">Appointment Details</div>
-
-                    <div class="appointment-calendar-card">
-                      <div class="appointment-calendar-head">
-                        <button type="button" id="prevCalendarMonth" class="calendar-nav-btn">‹</button>
-
-                        <div>
-                          <h4 id="calendarMonthLabel">April 2026</h4>
-                          <p>Choose appointment date</p>
-                        </div>
-
-                        <button type="button" id="nextCalendarMonth" class="calendar-nav-btn">›</button>
-                      </div>
-
-                      <div class="calendar-weekdays">
-                        <span>MON</span>
-                        <span>TUE</span>
-                        <span>WED</span>
-                        <span>THU</span>
-                        <span>FRI</span>
-                        <span>SAT</span>
-                        <span>SUN</span>
-                      </div>
-
-                      <div id="appointmentCalendarDays" class="appointment-calendar-days"></div>
-                    </div>
-
-                    <div class="appointment-slot-card mt-3">
-                      <h4>Available Slots</h4>
-                      <p id="appointmentSelectedDateText">Select a date to view slots</p>
-
-                      <div id="appointmentTimeSlots" class="appointment-time-slots calendar-slots"></div>
-
-                      <select id="appointmentType" class="form-select custom-input mt-3" required>
-                        <option value="">Select Appointment</option>
-                        <option value="Grooming">Grooming</option>
-                        <option value="Vaccination">Vaccination</option>
-                        <option value="Deworming">Deworming</option>
-                        <option value="Surgery">Surgery</option>
-                      </select>
-                    </div>
-                  </div>
-
-                </div>
-
-                <div class="register-submit-wrap-new">
-                  <button type="button" class="btn btn-set register-submit-btn" id="setAppointmentBtn">
-                    Set Appointment
-                  </button>
-                </div>
-              </form>
+  <div class="appointment-submit-wrap">
+    <button type="button" class="btn btn-set register-submit-btn" id="setAppointmentBtn">
+      Set Appointment
+    </button>
+  </div>
+</form>
             </div>
           </div>
         </section>
