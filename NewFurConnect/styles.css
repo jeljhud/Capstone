@@ -5305,11 +5305,6 @@ body:has(#publicPatientPage:not(.hidden)) .fc-phone {
   }
 }
 
-.appointment-nav-dropdown:hover .appointment-dropdown-menu {
-  max-height: 240px;
-  padding: 8px;
-}
-
 .appointment-nav-dropdown:hover .nav-arrow {
   transform: rotate(180deg);
 }
@@ -6773,3 +6768,973 @@ table td:last-child .btn {
   }
 }
 
+/* SIDEBAR CLICK-ACTIVE FIX */
+.nav-btn-custom,
+.appointment-main-btn,
+.dropdown-link-btn {
+  cursor: pointer !important;
+  text-decoration: none !important;
+}
+
+/* hover: bawal mag-open, light effect lang */
+.nav-btn-custom:hover,
+.dropdown-link-btn:hover {
+  background: #ffffff !important;
+  color: var(--primary) !important;
+  transform: none !important;
+}
+
+/* main buttons active/clicked */
+.nav-btn-custom.active,
+.nav-btn-custom.active-nav,
+.appointment-main-btn.active,
+.appointment-main-btn.active-nav,
+#logoutBtn.active {
+  background: #ffffff !important;
+  color: var(--primary) !important;
+  border: 2px solid #222 !important;
+  box-shadow: none !important;
+}
+
+/* dropdown links active/clicked */
+.dropdown-link-btn.active,
+.appointment-dropdown-menu .dropdown-link-btn.active {
+  background: #ffffff !important;
+  color: var(--primary) !important;
+  border: 2px solid #222 !important;
+  border-radius: 12px !important;
+  transform: none !important;
+}
+
+/* no auto hover dropdown */
+.appointment-nav-dropdown:hover .appointment-dropdown-menu {
+  max-height: 0;
+  padding: 0 8px;
+}
+
+/* open only by JS click */
+.appointment-nav-dropdown.open .appointment-dropdown-menu {
+  max-height: 240px !important;
+  padding: 8px !important;
+}
+
+/* REGISTRATION WIDTH OVERRIDE */
+#registerPage .register-panel {
+  width: min(100%, 1250px) !important;
+  max-width: 1250px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+#registerPage .register-panel .card-body {
+  padding-left: 28px !important;
+  padding-right: 28px !important;
+}
+
+#registerPage .register-section-card {
+  width: 100% !important;
+}
+
+/* para hindi masyadong narrow yung laman */
+#registerPage .form-grid-2 {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 18px 22px !important;
+}
+
+#registerPage .form-field.full {
+  grid-column: span 1 !important;
+}
+
+/* =========================================
+   PET RECORD MODAL REDESIGN
+========================================= */
+
+/* main modal */
+.patient-edit-modal {
+  max-width: 1250px !important;
+  padding: 38px !important;
+}
+
+/* top section (profile + actions) */
+.patient-edit-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 26px 28px !important;
+  border-radius: 24px !important;
+}
+
+/* GRID FIX */
+.info-grid-card {
+  display: grid !important;
+  grid-template-columns: 1.2fr 1fr !important;
+  gap: 22px !important;
+}
+
+/* force visit details full width */
+.info-column:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+/* section cards */
+.info-column {
+  background: #f8fdfe;
+  padding: 20px;
+  border-radius: 20px;
+  border: 1px solid #d6eef2;
+}
+
+/* section titles */
+.info-column h5 {
+  margin-bottom: 14px !important;
+  font-size: 18px !important;
+}
+
+/* spacing inputs */
+.info-column input {
+  margin-bottom: 10px;
+}
+
+/* 2 column inside */
+.two-col {
+  gap: 12px !important;
+}
+
+/* VISIT SECTION STYLE */
+.info-column:nth-child(3) {
+  background: linear-gradient(135deg, #eefbfc, #ffffff);
+  border: 1px solid #bdebf1;
+}
+
+/* NOTES CARD */
+.notes-card {
+  margin-top: 20px;
+  padding: 24px !important;
+}
+
+/* buttons alignment */
+.patient-top-actions {
+  gap: 10px;
+}
+
+/* BUTTON STYLE IMPROVEMENT */
+.patient-top-actions .btn {
+  border-radius: 14px !important;
+  padding: 10px 20px !important;
+}
+
+/* cancel button softer */
+#cancelEditBtn {
+  background: #6b7280 !important;
+}
+
+/* archive button */
+#archiveEditBtn {
+  background: #1b7f89 !important;
+}
+
+/* SAVE button stronger */
+.patient-top-actions .btn-primary {
+  background: linear-gradient(135deg, #0f6d7a, #1ba2b3) !important;
+}
+
+#recordsPage .table-responsive {
+  max-height: 620px !important;
+  overflow-y: auto !important;
+}
+
+#recordsPage .records-footer {
+  margin-top: 18px;
+}
+
+/* =========================================
+   DASHBOARD TABLE COMPACT DESIGN FIX
+========================================= */
+
+#dashboardPage .dashboard-soft-card {
+  border-radius: 30px !important;
+  overflow: hidden !important;
+}
+
+#dashboardPage .dashboard-soft-card .card-body {
+  padding: 24px !important;
+}
+
+#dashboardPage .table-responsive {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 109, 122, 0.14) !important;
+  border-radius: 22px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+#dashboardPage .dashboard-table {
+  width: 100% !important;
+  min-width: 700px !important;
+  table-layout: fixed !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+#dashboardPage .dashboard-table thead th {
+  height: 58px !important;
+  padding: 14px 16px !important;
+  background: #ecfbfd !important;
+  color: #31525a !important;
+  border-bottom: 1px solid #b8dfe6 !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.06em !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+}
+
+#dashboardPage .dashboard-table tbody td {
+  height: 58px !important;
+  padding: 14px 16px !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #e6f2f4 !important;
+  color: #1f2933 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  white-space: normal !important;
+}
+
+#dashboardPage .dashboard-table tbody tr {
+  height: 58px !important;
+}
+
+#dashboardPage .dashboard-table tbody tr:hover td {
+  background: #f6fcfd !important;
+}
+
+/* dashboard action buttons compact */
+#dashboardPage .dashboard-table .btn,
+#dashboardPage .dashboard-table button {
+  min-height: 42px !important;
+  padding: 8px 20px !important;
+  border-radius: 14px !important;
+  font-size: 12px !important;
+}
+
+/* status dropdown compact */
+#dashboardPage .appointment-status-trigger {
+  min-height: 38px !important;
+  padding: 8px 14px !important;
+  font-size: 12px !important;
+}
+
+/* recent activity should not be super tall */
+#dashboardPage .activity-table-scroll {
+  height: auto !important;
+  max-height: 360px !important;
+  overflow-y: auto !important;
+  border-radius: 22px !important;
+}
+
+/* =========================================
+   ULTRA COMPACT DASHBOARD TABLE
+========================================= */
+
+#dashboardPage .dashboard-table thead th {
+  height: 46px !important;
+  padding: 10px 12px !important;
+  font-size: 10px !important;
+  letter-spacing: 0.05em !important;
+}
+
+#dashboardPage .dashboard-table tbody td {
+  height: 48px !important;
+  padding: 10px 12px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+}
+
+#dashboardPage .dashboard-table tbody tr {
+  height: 48px !important;
+}
+
+/* tighten spacing between rows */
+#dashboardPage .dashboard-table tbody td {
+  line-height: 1.2 !important;
+}
+
+/* status pill mas maliit */
+#dashboardPage .appointment-status-trigger {
+  min-height: 32px !important;
+  padding: 6px 12px !important;
+  font-size: 11px !important;
+  border-radius: 999px !important;
+}
+
+/* edit button mas compact */
+#dashboardPage .dashboard-table .btn,
+#dashboardPage .dashboard-table button {
+  min-height: 34px !important;
+  padding: 6px 16px !important;
+  font-size: 11px !important;
+  border-radius: 12px !important;
+}
+
+/* search + button alignment */
+#dashboardPage .top-tools .search-box {
+  min-height: 42px !important;
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+}
+
+#dashboardPage .archive-appointment-btn {
+  min-height: 42px !important;
+  padding: 0 16px !important;
+  font-size: 12px !important;
+}
+
+/* card spacing mas tight */
+#dashboardPage .dashboard-soft-card .card-body {
+  padding: 18px !important;
+}
+
+/* table container mas dikit */
+#dashboardPage .table-responsive {
+  border-radius: 18px !important;
+}
+
+/* optional: konting breathing space lang */
+#dashboardPage .dashboard-table tbody tr + tr td {
+  border-top: 0px !important;
+}
+
+/* =========================================
+   EXTREME COMPACT DASHBOARD TABLE
+========================================= */
+
+#dashboardPage .dashboard-table thead th {
+  height: 40px !important;
+  padding: 6px 10px !important;
+  font-size: 9.5px !important;
+  letter-spacing: 0.04em !important;
+}
+
+#dashboardPage .dashboard-table tbody td {
+  height: 40px !important;
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.1 !important;
+}
+
+#dashboardPage .dashboard-table tbody tr {
+  height: 40px !important;
+}
+
+/* status pill - super compact */
+#dashboardPage .appointment-status-trigger {
+  min-height: 28px !important;
+  padding: 4px 10px !important;
+  font-size: 10px !important;
+  border-radius: 999px !important;
+}
+
+/* buttons - compact na talaga */
+#dashboardPage .dashboard-table .btn,
+#dashboardPage .dashboard-table button {
+  min-height: 28px !important;
+  padding: 4px 12px !important;
+  font-size: 10.5px !important;
+  border-radius: 10px !important;
+}
+
+/* search + top buttons */
+#dashboardPage .top-tools .search-box {
+  min-height: 36px !important;
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+}
+
+#dashboardPage .archive-appointment-btn {
+  min-height: 36px !important;
+  padding: 0 12px !important;
+  font-size: 11px !important;
+}
+
+/* card padding bawas pa */
+#dashboardPage .dashboard-soft-card .card-body {
+  padding: 14px !important;
+}
+
+/* container mas tight */
+#dashboardPage .table-responsive {
+  border-radius: 16px !important;
+}
+
+/* row spacing super minimal */
+#dashboardPage .dashboard-table tbody tr + tr td {
+  border-top: 0px !important;
+}
+
+/* =========================================
+   DASHBOARD DROPDOWN CUT-OFF FIX
+========================================= */
+
+#dashboardPage .dashboard-soft-card,
+#dashboardPage .dashboard-soft-card .card-body,
+#dashboardPage .table-responsive,
+#dashboardPage .dashboard-table,
+#dashboardPage .dashboard-table tbody,
+#dashboardPage .dashboard-table tr,
+#dashboardPage .dashboard-table td {
+  overflow: visible !important;
+}
+
+#dashboardPage .dashboard-soft-card {
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+#dashboardPage .appointments-card {
+  z-index: 20 !important;
+}
+
+#dashboardPage .appointment-status-dropdown,
+#dashboardPage .rebooking-action-dropdown {
+  position: relative !important;
+  z-index: 9999 !important;
+}
+
+#dashboardPage .appointment-status-dropdown.open,
+#dashboardPage .rebooking-action-dropdown.open {
+  z-index: 99999 !important;
+}
+
+#dashboardPage .appointment-status-menu,
+#dashboardPage .rebooking-action-menu {
+  z-index: 999999 !important;
+}
+
+/* give rows enough space only when dropdown is open */
+#dashboardPage tr:has(.appointment-status-dropdown.open),
+#dashboardPage tr:has(.rebooking-action-dropdown.open) {
+  height: 92px !important;
+}
+
+#dashboardPage tr:has(.appointment-status-dropdown.open) td,
+#dashboardPage tr:has(.rebooking-action-dropdown.open) td {
+  padding-top: 10px !important;
+  padding-bottom: 42px !important;
+}
+
+/* =========================================
+   DROPDOWN SIZE FIX (BALANCED UI)
+========================================= */
+
+/* main trigger (button na Waiting / Confirmed / Finished) */
+#dashboardPage .appointment-status-trigger {
+  min-height: 36px !important;
+  padding: 6px 16px !important;
+  font-size: 12.5px !important;
+  border-radius: 999px !important;
+}
+
+/* dropdown container */
+#dashboardPage .appointment-status-menu,
+#dashboardPage .rebooking-action-menu {
+  min-width: 160px !important;
+  padding: 10px 0 !important;
+  border-radius: 16px !important;
+}
+
+/* dropdown items */
+#dashboardPage .appointment-status-menu button,
+#dashboardPage .rebooking-action-menu button {
+  padding: 10px 18px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+/* spacing between items */
+#dashboardPage .appointment-status-menu button + button,
+#dashboardPage .rebooking-action-menu button + button {
+  margin-top: 4px;
+}
+
+/* action button (yung ACTION button sa rebooking) */
+#dashboardPage .dashboard-table .btn,
+#dashboardPage .dashboard-table button {
+  min-height: 36px !important;
+  padding: 6px 18px !important;
+  font-size: 12px !important;
+  border-radius: 12px !important;
+}
+
+/* =========================================
+   DASHBOARD TABLE PAGINATION + SCROLL FIX
+========================================= */
+
+#dashboardPage .dashboard-table-footer {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+#dashboardPage .logs-showing-text {
+  color: #31525a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+#dashboardPage .logs-pagination {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#dashboardPage .logs-page-btn {
+  min-height: 34px !important;
+  min-width: 38px !important;
+  padding: 6px 12px !important;
+  border: 1px solid #9edce5 !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  color: #0f6d7a !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  cursor: pointer;
+}
+
+#dashboardPage .logs-page-btn.active,
+#dashboardPage .logs-page-btn:hover:not(:disabled) {
+  background: #0f7f8c !important;
+  color: #ffffff !important;
+}
+
+#dashboardPage .logs-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#dashboardPage .table-responsive {
+  max-height: 430px !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+
+/* keep dropdowns visible */
+#dashboardPage .dashboard-soft-card,
+#dashboardPage .dashboard-soft-card .card-body {
+  overflow: visible !important;
+}
+
+#dashboardPage .status-dropdown,
+#dashboardPage .action-dropdown {
+  position: relative;
+  z-index: 50;
+}
+
+#dashboardPage .status-dropdown.active,
+#dashboardPage .action-dropdown.active {
+  z-index: 999;
+}
+
+#dashboardPage .status-menu,
+#dashboardPage .action-dropdown-menu {
+  z-index: 9999 !important;
+}
+
+/* compact but readable rows */
+#dashboardPage .dashboard-table thead th {
+  height: 44px !important;
+  padding: 9px 12px !important;
+  font-size: 10.5px !important;
+  text-align: center !important;
+}
+
+#dashboardPage .dashboard-table tbody td {
+  height: 46px !important;
+  padding: 9px 12px !important;
+  font-size: 12.5px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+#dashboardPage .dashboard-table .btn,
+#dashboardPage .dashboard-table button {
+  min-height: 34px !important;
+  padding: 6px 16px !important;
+  font-size: 11.5px !important;
+  border-radius: 12px !important;
+}
+
+/* =========================================
+   DASHBOARD DROPDOWN VISIBLE WHILE OPEN
+========================================= */
+
+#dashboardPage .table-responsive:has(.status-dropdown.active),
+#dashboardPage .table-responsive:has(.action-dropdown.active) {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+#dashboardPage .dashboard-soft-card:has(.status-dropdown.active),
+#dashboardPage .dashboard-soft-card:has(.action-dropdown.active),
+#dashboardPage .dashboard-soft-card .card-body:has(.status-dropdown.active),
+#dashboardPage .dashboard-soft-card .card-body:has(.action-dropdown.active) {
+  overflow: visible !important;
+  z-index: 9999 !important;
+}
+
+#dashboardPage .status-menu,
+#dashboardPage .action-dropdown-menu {
+  z-index: 99999 !important;
+}
+
+/* DASHBOARD EDIT MODAL CALENDAR ARROW FIX */
+#dashboardEditModal .appointment-calendar-head {
+  display: grid !important;
+  grid-template-columns: 44px 1fr 44px !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+#dashboardEditModal .appointment-calendar-head .calendar-nav-btn {
+  position: static !important;
+  transform: none !important;
+  width: 36px !important;
+  height: 36px !important;
+  justify-self: center !important;
+}
+
+#dashboardEditModal .appointment-calendar-head > div {
+  text-align: center !important;
+  min-width: 0 !important;
+}
+
+#dashboardEditModal #dashCalendarMonthLabel {
+  margin: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* =========================================
+   CALENDAR LEFT / RIGHT ARROW FIX
+   Left arrow = left side
+   Right arrow = right side
+========================================= */
+
+.appointment-calendar-head {
+  display: grid !important;
+  grid-template-columns: 44px minmax(0, 1fr) 44px !important;
+  align-items: center !important;
+  gap: 10px !important;
+  position: relative !important;
+  text-align: center !important;
+}
+
+.appointment-calendar-head > div {
+  grid-column: 2 !important;
+  text-align: center !important;
+  min-width: 0 !important;
+}
+
+.appointment-calendar-head .calendar-nav-btn {
+  position: static !important;
+  transform: none !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  justify-self: center !important;
+  line-height: 1 !important;
+}
+
+/* left arrows */
+#prevCalendarMonth,
+#editPrevCalendarMonth,
+#dashPrevCalendarMonth {
+  grid-column: 1 !important;
+}
+
+/* right arrows */
+#nextCalendarMonth,
+#editNextCalendarMonth,
+#dashNextCalendarMonth {
+  grid-column: 3 !important;
+}
+
+/* ================= QR MOBILE BOOTSTRAP ICON FIX ================= */
+
+.fc-status-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.fc-menu-icon,
+.fc-card-icon,
+.fc-soft-plus,
+.fc-lock,
+.fc-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fc-menu-icon i,
+.fc-card-icon i,
+.fc-soft-plus i,
+.fc-lock i,
+.fc-chevron i {
+  font-size: 1em;
+  line-height: 1;
+}
+
+.fc-card-icon i {
+  font-size: 18px;
+}
+
+.fc-menu-icon i {
+  font-size: 17px;
+}
+
+.fc-soft-plus i {
+  font-size: 16px;
+}
+
+.fc-lock i,
+.fc-chevron i {
+  font-size: 15px;
+}
+
+#publicPatientLoginBtn {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+#publicPatientLoginBtn * {
+  pointer-events: none;
+}
+
+/* ================= PATIENT LOGIN MODAL ================= */
+
+#publicPatientLoginBtn {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+#publicPatientLoginBtn * {
+  pointer-events: none;
+}
+
+.fc-login-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(12, 44, 51, 0.38);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+}
+
+.fc-login-card {
+  position: relative;
+  width: min(100%, 370px);
+  background: #ffffff;
+  border-radius: 30px;
+  padding: 30px 26px;
+  box-shadow: 0 24px 60px rgba(12, 44, 51, 0.22);
+  font-family: inherit;
+  color: #173f46;
+}
+
+.fc-login-close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: #dff8fb;
+  color: #173f46;
+  font-size: 22px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fc-login-icon {
+  width: 62px;
+  height: 62px;
+  border-radius: 20px;
+  background: #c9f4f6;
+  color: #007c89;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin-bottom: 16px;
+}
+
+.fc-login-card h3 {
+  margin: 0 0 8px;
+  font-weight: 900;
+  color: #173f46;
+}
+
+.fc-login-card p {
+  margin: 0 0 20px;
+  color: #5b7378;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.fc-login-card label {
+  display: block;
+  margin: 12px 0 7px;
+  font-weight: 800;
+  color: #173f46;
+}
+
+.fc-login-submit {
+  width: 100%;
+  margin-top: 18px;
+  border: 0;
+  border-radius: 18px;
+  background: #007c89;
+  color: #ffffff;
+  padding: 13px 18px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fc-login-error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #ffe5e9;
+  color: #d93649;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.fc-login-hint {
+  display: block;
+  text-align: center;
+  margin-top: 12px;
+  color: #6d858a;
+  font-weight: 700;
+}
+
+/* ================= PATIENT LOGIN MODAL FIX ================= */
+
+.fc-login-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(12, 44, 51, 0.38);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+}
+
+.fc-login-card {
+  position: relative;
+  width: min(100%, 370px);
+  background: #ffffff;
+  border-radius: 30px;
+  padding: 30px 26px;
+  box-shadow: 0 24px 60px rgba(12, 44, 51, 0.22);
+  font-family: inherit;
+  color: #173f46;
+}
+
+.fc-login-close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: #dff8fb;
+  color: #173f46;
+  font-size: 22px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fc-login-icon {
+  width: 62px;
+  height: 62px;
+  border-radius: 20px;
+  background: #c9f4f6;
+  color: #007c89;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin: 0 auto 18px;
+}
+
+.fc-login-card h3,
+.fc-login-card p {
+  text-align: center;
+}
+
+.fc-login-card h3 {
+  margin: 0 0 8px;
+  font-weight: 900;
+  color: #173f46;
+}
+
+.fc-login-card p {
+  margin: 0 0 20px;
+  color: #5b7378;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.fc-login-card label {
+  display: block;
+  margin: 12px 0 7px;
+  font-weight: 800;
+  color: #173f46;
+}
+
+#publicLoginPatientId[readonly] {
+  background: #ffffff;
+  cursor: not-allowed;
+}
+
+.fc-login-submit {
+  width: 100%;
+  margin-top: 18px;
+  border: 0;
+  border-radius: 18px;
+  background: #007c89;
+  color: #ffffff;
+  padding: 13px 18px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fc-login-error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #ffe5e9;
+  color: #d93649;
+  font-weight: 800;
+  font-size: 13px;
+}

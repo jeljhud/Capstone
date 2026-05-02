@@ -37,23 +37,9 @@ function showNotification(message, type = "success") {
   });
 }
 
-/* TEMP DATA ONLY - no localStorage */
+/* DATA */
 function loadPatientRecords() {
-  patientRecords = [
-    {
-      id: 1,
-      ownerName: "Sample Owner",
-      contactNumber: "09123456789",
-      email: "sample@gmail.com",
-      petName: "Sample Pet",
-      petSpecies: "Dog",
-      breed: "Asp aspin",
-      age: "2 Years",
-      gender: "Male",
-      weight: "10",
-      appointmentArchived: false
-    }
-  ];
+  patientRecords = [];
 }
 
 /* FORMATTERS */

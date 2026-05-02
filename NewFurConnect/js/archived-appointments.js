@@ -1,33 +1,16 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
+  await loadArchivedAppointments();
   renderArchivedAppointments();
   initializeArchivedAppointmentsEvents();
 });
 
-/* TEMP DATA — papalitan later ng Firebase */
-let archivedAppointments = [
-  {
-    id: "A001",
-    petName: "Buddy",
-    ownerName: "Juan Dela Cruz",
-    appointmentDate: "2026-05-10",
-    appointmentTime: "10:00",
-    appointmentType: "Grooming",
-    appointmentStatus: "Finished",
-    notes: "Full groom, nails trimmed",
-    archivedAt: "2026-05-10T11:00:00"
-  },
-  {
-    id: "A002",
-    petName: "Milo",
-    ownerName: "Maria Santos",
-    appointmentDate: "2026-05-15",
-    appointmentTime: "14:00",
-    appointmentType: "Checkup",
-    appointmentStatus: "Finished",
-    notes: "Vaccinated",
-    archivedAt: "2026-05-15T15:00:00"
-  }
-];
+/* DATA */
+let archivedAppointments = [];
+
+function loadArchivedAppointments() {
+  archivedAppointments = [];
+
+}
 
 let currentLogsPage = 1;
 const logsPerPage = 8;
@@ -267,13 +250,20 @@ function formatSchedule(date, time) {
 function formatTime(timeValue) {
   if (!timeValue) return "-";
 
-  let [hours, minutes] = timeValue.split(":");
-  hours = parseInt(hours, 10);
+  return String(timeValue)
+    .split(",")
+    .map((time) => {
+      let [hours, minutes] = time.trim().split(":");
+      hours = parseInt(hours, 10);
 
-  const ampm = hours >= 12 ? "PM" : "AM";
-  hours = hours % 12 || 12;
+      if (isNaN(hours) || !minutes) return time.trim();
 
-  return `${hours}:${minutes} ${ampm}`;
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12 || 12;
+
+      return `${hours}:${minutes} ${ampm}`;
+    })
+    .join(", ");
 }
 
 function formatArchivedDateTime(date) {

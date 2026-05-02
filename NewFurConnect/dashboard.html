@@ -45,7 +45,7 @@
 
             <div class="appointment-dropdown-menu">
               <a href="records.html" class="dropdown-link-btn">Pet Records</a>
-              <a href="archived-records.html" class="dropdown-link-btn">Archived Records</a>
+              <a href="archived-records.html" class="dropdown-link-btn">Archived Pet Records</a>
             </div>
           </div>
 
@@ -129,33 +129,6 @@
   </a>
 </div>
 
-<div class="dashboard-stats">
-  <div class="stat-card">
-    <div class="stat-icon"><i class="bi bi-people"></i></div>
-    <div>
-      <div class="stat-value" id="totalPatients">0</div>
-      <div class="stat-label">Total Patients</div>
-    </div>
-  </div>
-
-  <div class="stat-card">
-    <div class="stat-icon"><i class="bi bi-calendar-day"></i></div>
-    <div>
-      <div class="stat-value" id="todayAppointments">0</div>
-      <div class="stat-label">Today's Appointments</div>
-    </div>
-  </div>
-
-  <div class="stat-card">
-    <div class="stat-icon"><i class="bi bi-arrow-repeat"></i></div>
-    <div>
-      <div class="stat-value" id="pendingRebooking">0</div>
-      <div class="stat-label">Pending Rebooking</div>
-    </div>
-  </div>
-</div>
-
-
 
           <div class="card dashboard-soft-card appointments-card mt-4">
             <div class="card-body p-4">
@@ -194,7 +167,12 @@
                   <tbody id="upcomingAppointmentsBody"></tbody>
                 </table>
               </div>
+                          <div class="dashboard-table-footer">
+  <div id="upcomingShowingText" class="logs-showing-text">No records</div>
+  <div id="upcomingPagination" class="logs-pagination"></div>
+</div>
             </div>
+
           </div>
 
           <div class="card dashboard-soft-card mt-4">
@@ -230,7 +208,12 @@
                   </tbody>
                 </table>
               </div>
+              <div class="dashboard-table-footer">
+  <div id="rebookingShowingText" class="logs-showing-text">No records</div>
+  <div id="rebookingPagination" class="logs-pagination"></div>
+</div>
             </div>
+            
           </div>
 
           <div class="card dashboard-soft-card mt-4">
@@ -250,7 +233,12 @@
                   <tbody id="lowStockBody"></tbody>
                 </table>
               </div>
+              <div class="dashboard-table-footer">
+  <div id="inventoryShowingText" class="logs-showing-text">No records</div>
+  <div id="inventoryPagination" class="logs-pagination"></div>
+</div>
             </div>
+            
           </div>
 
           <div class="card dashboard-soft-card mt-4">
@@ -279,6 +267,10 @@
                   <tbody id="activityLogBody"></tbody>
                 </table>
               </div>
+              <div class="dashboard-table-footer">
+  <div id="activityShowingText" class="logs-showing-text">No records</div>
+  <div id="activityPagination" class="logs-pagination"></div>
+</div>
             </div>
           </div>
         </section>
@@ -286,6 +278,141 @@
       </main>
     </div>
   </section>
+
+  <div id="dashboardEditModal" class="qr-modal hidden">
+  <div class="patient-edit-modal">
+
+    <div class="patient-edit-header">
+      <h3>Pet Information</h3>
+
+      <div class="patient-edit-top">
+        <div class="patient-summary">
+          <div class="patient-avatar-wrap">
+            <div class="patient-avatar" id="dashEditAvatar">
+              <span id="dashEditAvatarLetter">P</span>
+            </div>
+          </div>
+
+          <div class="patient-main-info">
+            <h4 id="dashEditHeaderPetName">Pet Name</h4>
+            <p id="dashEditHeaderOwner">Owner Name</p>
+          </div>
+
+          <div class="patient-id-box">
+            <span>PATIENT ID</span>
+            <strong id="dashEditHeaderId">P-1001</strong>
+          </div>
+        </div>
+
+        <div class="patient-top-actions">
+          <button type="button" class="btn btn-secondary" id="cancelDashboardEditBtn">Cancel</button>
+          <button type="submit" form="dashboardEditForm" class="btn btn-primary">Save All Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <form id="dashboardEditForm">
+      <input type="hidden" id="dashEditId">
+      <input type="hidden" id="dashEditDate">
+      <input type="hidden" id="dashEditTime">
+
+      <div class="patient-edit-sections">
+        <div class="patient-edit-left">
+
+          <div class="info-grid-card">
+            <div class="info-column">
+              <h5>Pet Details</h5>
+
+              <label for="dashEditPetName">Pet Name</label>
+              <input type="text" class="form-control" id="dashEditPetName">
+
+              <label for="dashEditSpecies">Species</label>
+              <input type="text" class="form-control" id="dashEditSpecies">
+
+              <label for="dashEditBreed">Breed</label>
+              <input type="text" class="form-control" id="dashEditBreed">
+            </div>
+
+            <div class="info-column">
+              <h5>Owner Details</h5>
+
+              <label for="dashEditOwnerName">Owner Name</label>
+              <input type="text" class="form-control" id="dashEditOwnerName">
+
+              <label for="dashEditContact">Contact #</label>
+              <input type="text" class="form-control" id="dashEditContact">
+
+              <label for="dashEditEmail">Email</label>
+              <input type="email" class="form-control" id="dashEditEmail">
+            </div>
+
+          </div>
+
+          <div class="appointment-step">
+            <div class="section-title">Select Service</div>
+            <p class="step-subtitle">Choose appointment service first</p>
+
+            <select id="dashEditService" class="form-select custom-input" required>
+              <option value="">Select Service</option>
+              <option value="Grooming">Grooming</option>
+              <option value="Vaccination">Vaccination</option>
+              <option value="Deworming">Deworming</option>
+              <option value="Surgery">Surgery</option>
+            </select>
+          </div>
+
+          <div id="dashEditScheduleSection" class="appointment-step">
+            <div class="section-title">Select Date & Time</div>
+
+            <div class="appointment-calendar-card">
+              <div class="appointment-calendar-head">
+                <button type="button" id="dashPrevCalendarMonth" class="calendar-nav-btn">‹</button>
+
+                <div>
+                  <h4 id="dashCalendarMonthLabel">April 2026</h4>
+                  <p>Choose appointment date</p>
+                </div>
+
+                <button type="button" id="dashNextCalendarMonth" class="calendar-nav-btn">›</button>
+              </div>
+
+              <div class="calendar-weekdays">
+                <span>MON</span>
+                <span>TUE</span>
+                <span>WED</span>
+                <span>THU</span>
+                <span>FRI</span>
+                <span>SAT</span>
+                <span>SUN</span>
+              </div>
+
+              <div id="dashAppointmentCalendarDays" class="appointment-calendar-days"></div>
+            </div>
+
+            <div class="appointment-slot-card mt-3">
+              <h4>Available Slots</h4>
+              <p id="dashAppointmentSelectedDateText">Select a date to view slots</p>
+              <div id="dashAppointmentTimeSlots" class="appointment-time-slots calendar-slots"></div>
+            </div>
+          </div>
+
+          <div class="notes-card">
+            <div class="notes-head">
+              <h5>Notes</h5>
+            </div>
+
+            <textarea id="dashEditNotes" class="form-control notes-area" rows="6"></textarea>
+          </div>
+
+        </div>
+      </div>
+    </form>
+
+    <button type="button" class="modal-close-x" id="closeDashboardEditModal">×</button>
+  </div>
+</div>
+
+  <div id="notificationContainer" class="notif-container"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="js/navigation.js"></script>
