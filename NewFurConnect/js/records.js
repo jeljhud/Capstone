@@ -16,7 +16,36 @@ let editCalendarDate = new Date();
 
 /* ================= DATA ================= */
 
-let patientRecords = [];
+let patientRecords = [
+  {
+    id: "1001",
+    petName: "Mochi",
+    petSpecies: "Dog",
+    breed: "Shih Tzu",
+    ownerName: "Juan Dela Cruz",
+    contactNumber: "0917 123 4567",
+    email: "juan@example.com",
+
+    appointmentType: "Check-up",
+    appointmentDate: "2026-05-12",
+    appointmentTime: "09:00,09:30",
+    appointmentStatus: "Waiting",
+
+    nextAppointmentDate: "2026-06-12",
+    nextAppointmentTime: "10:00",
+
+    gender: "Male",
+    weight: "5.2 kg",
+    age: "3 years",
+
+    notes: "Sample medical notes only. Healthy condition, for mobile UI testing.",
+    internalNotes: "Sample internal note.",
+    petImage: "",
+
+    patientPassword: "1234",
+    appointmentArchived: false
+  }
+];
 let onlineAppointmentRequests = [];
 
 function savePatientRecords() {
