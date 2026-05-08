@@ -1,5 +1,4 @@
-document.addEventListener("DOMContentLoaded", async function () {
-  await syncRecordsFromFirebaseToLocalStorage();
+document.addEventListener("DOMContentLoaded", function () {
   loadRecordsLocalStorage();
 
   initializeExportQr();
@@ -123,112 +122,6 @@ function saveRecentActivity(activity) {
   recentActivities.unshift(activity);
 
   setLocalStorageArray(RECORDS_STORAGE_KEYS.recentActivities, recentActivities);
-}
-
-async function getPatientFirebaseDocRef(recordOrId) {
-  if (!window.db) {
-    throw new Error("Firestore is not initialized.");
-  }
-
-  const firebaseDocId =
-    typeof recordOrId === "object" ? recordOrId.firebaseDocId : "";
-
-  const patientId =
-    typeof recordOrId === "object" ? recordOrId.id : recordOrId;
-
-  if (firebaseDocId) {
-    return window.db.collection("patientRecords").doc(firebaseDocId);
-  }
-
-  const snapshot = await window.db
-    .collection("patientRecords")
-    .where("id", "==", String(patientId))
-    .limit(1)
-    .get();
-
-  if (snapshot.empty) {
-    throw new Error("Patient document not found in Firebase.");
-  }
-
-  return snapshot.docs[0].ref;
-}
-
-async function updatePatientRecordInFirebase(recordOrId, updates) {
-  const docRef = await getPatientFirebaseDocRef(recordOrId);
-
-  await docRef.update({
-    ...updates,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-}
-
-async function saveRecentActivityToFirebase(activity) {
-  if (!window.db) return;
-
-  await window.db.collection("recentActivities").add({
-    ...activity,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-}
-
-async function syncRecordsFromFirebaseToLocalStorage() {
-  if (!window.db) {
-    console.warn("Firestore is not ready. Using localStorage only.");
-    return;
-  }
-
-  try {
-    const snapshot = await window.db.collection("patientRecords").get();
-
-    const firebaseRecords = snapshot.docs.map(function (doc) {
-      const data = doc.data();
-
-      return {
-        firebaseDocId: doc.id,
-        ...data,
-        createdAt: normalizeFirebaseDate(data.createdAt),
-        updatedAt: normalizeFirebaseDate(data.updatedAt),
-        archivedAt: normalizeFirebaseDate(data.archivedAt),
-        appointmentArchivedAt: normalizeFirebaseDate(data.appointmentArchivedAt)
-      };
-    });
-
-    const activeRecords = [];
-    const archivedRecords = [];
-
-    firebaseRecords.forEach(function (record) {
-      if (isPatientRecordArchived(record)) {
-        archivedRecords.push(createArchivedPatientRecord(record));
-      } else {
-        activeRecords.push(createActivePatientRecord(record));
-      }
-    });
-
-    setLocalStorageArray(
-      RECORDS_STORAGE_KEYS.patientRecords,
-      sortActiveRecordsLifo(activeRecords)
-    );
-
-    setLocalStorageArray(
-      RECORDS_STORAGE_KEYS.archivedPatientRecords,
-      sortArchivedRecordsLifo(archivedRecords)
-    );
-
-    console.log("Firebase records loaded:", firebaseRecords.length);
-  } catch (error) {
-    console.error("Firestore records load error:", error);
-    showNotification("Failed to load Firebase records. Using local records.", "warning");
-  }
-}
-
-function normalizeFirebaseDate(value) {
-  if (!value) return "";
-
-  if (value.toDate) {
-    return value.toDate().toISOString();
-  }
-
-  return value;
 }
 
 function saveArchivedAppointmentLog(record) {
@@ -585,7 +478,7 @@ function closeEditModal() {
   currentEditIndex = null;
 }
 
-async function saveEditedRecord(event) {
+function saveEditedRecord(event) {
   event.preventDefault();
 
   if (currentEditIndex === null || !patientRecords[currentEditIndex]) return;
@@ -598,7 +491,7 @@ async function saveEditedRecord(event) {
     return;
   }
 
-  const updatedRecord = {
+  patientRecords[currentEditIndex] = {
     ...oldRecord,
     id: getValue("editId"),
     petName: getValue("editPetName").trim(),
@@ -621,59 +514,23 @@ async function saveEditedRecord(event) {
     petImage: getValue("editPetImageData"),
 
     appointmentArchived: false,
-    archived: false,
-    isArchived: false,
-    status: "active",
     archivedAt: "",
     appointmentArchivedAt: "",
     updatedAt: new Date().toISOString()
   };
 
-  const activity = {
+  savePatientRecords();
+
+  saveRecentActivity({
     dateTime: new Date().toLocaleString(),
     module: "Patient Records",
     action: "Edited Record",
-    details: `${updatedRecord.petName || "Patient"} record updated`
-  };
+    details: `${patientRecords[currentEditIndex].petName || "Patient"} record updated`
+  });
 
-  try {
-    await updatePatientRecordInFirebase(oldRecord, {
-      id: updatedRecord.id,
-      petName: updatedRecord.petName,
-      petSpecies: updatedRecord.petSpecies,
-      breed: updatedRecord.breed,
-      ownerName: updatedRecord.ownerName,
-      appointmentType: updatedRecord.appointmentType,
-      gender: updatedRecord.gender,
-      weight: updatedRecord.weight,
-      age: updatedRecord.age,
-      contactNumber: updatedRecord.contactNumber,
-      email: updatedRecord.email,
-      notes: updatedRecord.notes,
-      internalNotes: updatedRecord.internalNotes,
-      petImage: updatedRecord.petImage,
-      appointmentArchived: false,
-      archived: false,
-      isArchived: false,
-      status: "active",
-      archivedAt: "",
-      appointmentArchivedAt: ""
-    });
-
-    await saveRecentActivityToFirebase(activity);
-
-    patientRecords[currentEditIndex] = updatedRecord;
-
-    savePatientRecords();
-    saveRecentActivity(activity);
-
-    renderActiveRecords();
-    closeEditModal();
-    showNotification("Record updated successfully");
-  } catch (error) {
-    console.error("Firebase edit record error:", error);
-    showNotification("Failed to update record in Firebase.", "error");
-  }
+  renderActiveRecords();
+  closeEditModal();
+  showNotification("Record updated successfully");
 }
 
 function archiveCurrentRecord() {
@@ -704,7 +561,7 @@ function archiveSelectedActiveRecords() {
   renderActiveRecords();
 }
 
-async function archiveRecordsByIds(recordIds) {
+function archiveRecordsByIds(recordIds) {
   if (!Array.isArray(recordIds) || recordIds.length === 0) return;
 
   loadRecordsLocalStorage();
@@ -718,15 +575,7 @@ async function archiveRecordsByIds(recordIds) {
 
   patientRecords.forEach(function (record) {
     if (idsToArchive.includes(String(record.id))) {
-      const archivedRecord = {
-        ...createArchivedPatientRecord(record),
-        appointmentArchived: true,
-        archived: true,
-        isArchived: true,
-        status: "archived",
-        archivedAt: new Date().toISOString(),
-        appointmentArchivedAt: new Date().toISOString()
-      };
+      const archivedRecord = createArchivedPatientRecord(record);
 
       archivedNow.push(archivedRecord);
       saveArchivedAppointmentLog(archivedRecord);
@@ -740,7 +589,25 @@ async function archiveRecordsByIds(recordIds) {
     return;
   }
 
-  const activity = {
+  const archivedIds = archivedNow.map(function (record) {
+    return String(record.id);
+  });
+
+  archivedPatientRecords = archivedPatientRecords.filter(function (record) {
+    return !archivedIds.includes(String(record.id));
+  });
+
+  archivedPatientRecords = [
+    ...archivedNow,
+    ...archivedPatientRecords
+  ];
+
+  patientRecords = remainingActiveRecords;
+
+  savePatientRecords();
+  saveArchivedPatientRecords();
+
+  saveRecentActivity({
     dateTime: new Date().toLocaleString(),
     module: "Patient Records",
     action: "Archived Record",
@@ -748,52 +615,13 @@ async function archiveRecordsByIds(recordIds) {
       archivedNow.length === 1
         ? `${archivedNow[0].petName || "Patient"} record archived`
         : `${archivedNow.length} patient record(s) archived`
-  };
+  });
 
-  try {
-    for (const record of archivedNow) {
-      await updatePatientRecordInFirebase(record, {
-        appointmentArchived: true,
-        archived: true,
-        isArchived: true,
-        status: "archived",
-        archivedAt: record.archivedAt,
-        appointmentArchivedAt: record.appointmentArchivedAt
-      });
-    }
-
-    await saveRecentActivityToFirebase(activity);
-
-    const archivedIds = archivedNow.map(function (record) {
-      return String(record.id);
-    });
-
-    archivedPatientRecords = archivedPatientRecords.filter(function (record) {
-      return !archivedIds.includes(String(record.id));
-    });
-
-    archivedPatientRecords = [
-      ...archivedNow,
-      ...archivedPatientRecords
-    ];
-
-    patientRecords = remainingActiveRecords;
-
-    savePatientRecords();
-    saveArchivedPatientRecords();
-    saveRecentActivity(activity);
-
-    renderActiveRecords();
-
-    showNotification(
-      archivedNow.length === 1
-        ? "Record archived successfully"
-        : "Selected records archived successfully"
-    );
-  } catch (error) {
-    console.error("Firebase archive record error:", error);
-    showNotification("Failed to archive record in Firebase.", "error");
-  }
+  showNotification(
+    archivedNow.length === 1
+      ? "Record archived successfully"
+      : "Selected records archived successfully"
+  );
 }
 
 function handleAvatarPreview() {
@@ -1062,7 +890,7 @@ function renderRecordsPagination(totalPages) {
 }
 
 /* ================= ARCHIVE ACTIONS ================= */
-async function retrieveSelectedArchivedRecords() {
+function retrieveSelectedArchivedRecords() {
   const selected = document.querySelectorAll(".archived-checkbox:checked");
 
   if (selected.length === 0) {
@@ -1088,69 +916,38 @@ async function retrieveSelectedArchivedRecords() {
   }
 
   const restoredRecords = recordsToRetrieve.map(function (record) {
-    return {
-      ...createRetrievedPatientRecord(record),
-      appointmentArchived: false,
-      archived: false,
-      isArchived: false,
-      archivedAt: "",
-      appointmentArchivedAt: "",
-      dateArchived: "",
-      status: "active",
-      retrievedAt: new Date().toISOString()
-    };
+    return createRetrievedPatientRecord(record);
   });
 
-  const activity = {
+  const restoredIds = restoredRecords.map(function (record) {
+    return String(record.id);
+  });
+
+  patientRecords = patientRecords.filter(function (record) {
+    return !restoredIds.includes(String(record.id));
+  });
+
+  archivedPatientRecords = archivedPatientRecords.filter(function (record) {
+    return !restoredIds.includes(String(record.id));
+  });
+
+  patientRecords = [
+    ...restoredRecords,
+    ...patientRecords
+  ];
+
+  savePatientRecords();
+  saveArchivedPatientRecords();
+
+  saveRecentActivity({
     dateTime: new Date().toLocaleString(),
     module: "Patient Records",
     action: "Retrieved Archived Record",
     details: `${restoredRecords.length} archived record(s) retrieved`
-  };
+  });
 
-  try {
-    for (const record of restoredRecords) {
-      await updatePatientRecordInFirebase(record, {
-        appointmentArchived: false,
-        archived: false,
-        isArchived: false,
-        archivedAt: "",
-        appointmentArchivedAt: "",
-        dateArchived: "",
-        status: "active",
-        retrievedAt: record.retrievedAt
-      });
-    }
-
-    await saveRecentActivityToFirebase(activity);
-
-    const restoredIds = restoredRecords.map(function (record) {
-      return String(record.id);
-    });
-
-    patientRecords = patientRecords.filter(function (record) {
-      return !restoredIds.includes(String(record.id));
-    });
-
-    archivedPatientRecords = archivedPatientRecords.filter(function (record) {
-      return !restoredIds.includes(String(record.id));
-    });
-
-    patientRecords = [
-      ...restoredRecords,
-      ...patientRecords
-    ];
-
-    savePatientRecords();
-    saveArchivedPatientRecords();
-    saveRecentActivity(activity);
-
-    renderArchivedRecords();
-    showNotification("Selected record(s) retrieved successfully");
-  } catch (error) {
-    console.error("Firebase retrieve record error:", error);
-    showNotification("Failed to retrieve record in Firebase.", "error");
-  }
+  renderArchivedRecords();
+  showNotification("Selected record(s) retrieved successfully");
 }
 
 function updateArchivedRecordsShowingText(total) {
@@ -1687,37 +1484,26 @@ function initializePatientAccountSettings() {
   const openChangePasswordBtn = document.getElementById("openChangePasswordBtn");
   const openChangeOwnerBtn = document.getElementById("openChangeOwnerBtn");
   const openChangePetBtn = document.getElementById("openChangePetBtn");
-  const settingsModal = document.getElementById("patientSettingsModal");
 
   if (openChangePasswordBtn && openChangePasswordBtn.dataset.bound !== "true") {
     openChangePasswordBtn.addEventListener("click", function () {
-      openPatientSettingsModal("password");
+      openPatientSettingsSection("password");
     });
     openChangePasswordBtn.dataset.bound = "true";
   }
 
   if (openChangeOwnerBtn && openChangeOwnerBtn.dataset.bound !== "true") {
     openChangeOwnerBtn.addEventListener("click", function () {
-      openPatientSettingsModal("owner");
+      openPatientSettingsSection("owner");
     });
     openChangeOwnerBtn.dataset.bound = "true";
   }
 
   if (openChangePetBtn && openChangePetBtn.dataset.bound !== "true") {
     openChangePetBtn.addEventListener("click", function () {
-      openPatientSettingsModal("pet");
+      openPatientSettingsSection("pet");
     });
     openChangePetBtn.dataset.bound = "true";
-  }
-
-  if (settingsModal && settingsModal.dataset.bound !== "true") {
-    settingsModal.addEventListener("click", function (event) {
-      if (event.target === settingsModal) {
-        closePatientSettingsModal();
-      }
-    });
-
-    settingsModal.dataset.bound = "true";
   }
 
   if (passwordForm && passwordForm.dataset.bound !== "true") {
@@ -1734,197 +1520,6 @@ function initializePatientAccountSettings() {
     petForm.addEventListener("submit", handlePatientPetInfoChange);
     petForm.dataset.bound = "true";
   }
-}
-
-function closePatientSettingsModal() {
-  const modal = document.getElementById("patientSettingsModal");
-  const passwordForm = document.getElementById("settingsPasswordForm");
-  const ownerForm = document.getElementById("settingsOwnerForm");
-  const petForm = document.getElementById("settingsPetForm");
-
-  modal?.classList.add("hidden");
-
-  passwordForm?.classList.add("hidden");
-  ownerForm?.classList.add("hidden");
-  petForm?.classList.add("hidden");
-}
-
-function openPatientSettingsModal(section) {
-  const modal = document.getElementById("patientSettingsModal");
-  const passwordForm = document.getElementById("settingsPasswordForm");
-  const ownerForm = document.getElementById("settingsOwnerForm");
-  const petForm = document.getElementById("settingsPetForm");
-
-  if (!modal) return;
-
-  passwordForm?.classList.add("hidden");
-  ownerForm?.classList.add("hidden");
-  petForm?.classList.add("hidden");
-
-  if (section === "password") {
-    passwordForm?.classList.remove("hidden");
-  }
-
-  if (section === "owner") {
-    ownerForm?.classList.remove("hidden");
-  }
-
-  if (section === "pet") {
-    petForm?.classList.remove("hidden");
-  }
-
-  modal.classList.remove("hidden");
-}
-
-function injectPatientSettingsModalStyles() {
-  if (document.getElementById("patientSettingsModalStyles")) return;
-
-  const style = document.createElement("style");
-  style.id = "patientSettingsModalStyles";
-
-  style.textContent = `
-    .fc-settings-subtext {
-      margin: 8px 0 0;
-      color: #5f747b;
-      font-size: 13px;
-      font-weight: 500;
-      line-height: 1.5;
-    }
-
-    .fc-settings-button-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .fc-settings-action-btn {
-      width: 100%;
-      min-height: 78px;
-      padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      border: 1px solid #9ce1eb;
-      border-radius: 22px;
-      background: #ffffff;
-      color: #073f48;
-      text-align: left;
-      cursor: pointer;
-      box-shadow: 0 10px 22px rgba(15, 109, 122, 0.08);
-    }
-
-    .fc-settings-action-btn:hover {
-      background: #eefbfc;
-      transform: translateY(-1px);
-    }
-
-    .fc-settings-icon {
-      width: 48px;
-      height: 48px;
-      min-width: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 16px;
-      background: #0f7f8c;
-      color: #ffffff;
-      font-size: 22px;
-    }
-
-    .fc-settings-action-btn strong {
-      display: block;
-      color: #073f48;
-      font-size: 14px;
-      font-weight: 900;
-      line-height: 1.2;
-    }
-
-    .fc-settings-action-btn small {
-      display: block;
-      margin-top: 4px;
-      color: #5f747b;
-      font-size: 11px;
-      font-weight: 600;
-      line-height: 1.3;
-    }
-
-    .fc-settings-modal {
-      position: fixed;
-      inset: 0;
-      z-index: 99999;
-      padding: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(7, 31, 36, 0.45);
-      backdrop-filter: blur(5px);
-    }
-
-    .fc-settings-modal.hidden {
-      display: none !important;
-    }
-
-    .fc-settings-modal-box {
-      position: relative;
-      width: 100%;
-      max-width: 390px;
-      max-height: 85vh;
-      overflow-y: auto;
-      padding: 24px 20px 20px;
-      border: 1px solid #9ce1eb;
-      border-radius: 28px;
-      background: #ffffff;
-      box-shadow: 0 24px 55px rgba(15, 23, 42, 0.22);
-    }
-
-    .fc-settings-modal-close {
-      position: absolute;
-      top: 14px;
-      right: 14px;
-      width: 34px;
-      height: 34px;
-      border: none;
-      border-radius: 50%;
-      background: #eefbfc;
-      color: #073f48;
-      font-size: 24px;
-      font-weight: 800;
-      line-height: 1;
-      cursor: pointer;
-    }
-
-    .fc-settings-form h2 {
-      margin: 0;
-      padding-right: 38px;
-      color: #086273;
-      font-size: 21px;
-      font-weight: 900;
-      line-height: 1.2;
-    }
-
-    .fc-settings-form label {
-      margin-top: 14px;
-      margin-bottom: 6px;
-      color: #5f747b;
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .fc-settings-form .fc-submit-btn {
-      width: 100%;
-      margin-top: 18px;
-    }
-
-    .fc-settings-form .fc-success,
-    .fc-settings-form .fc-error {
-      margin-top: 12px;
-      font-size: 13px;
-      text-align: center;
-    }
-  `;
-
-  document.head.appendChild(style);
 }
 
 function hasSavedPatientPassword(patient) {
@@ -2522,1105 +2117,4 @@ function openPatientSettingsSection(section) {
   if (section === "pet") {
     document.getElementById("settingsPetForm")?.classList.remove("hidden");
   }
-}
-
-/* =========================================================
-   EMERGENCY REPAIR ONLY: EXPORT QR BUTTON
-   Paste at VERY BOTTOM of records.js
-========================================================= */
-
-(function () {
-  document.addEventListener("DOMContentLoaded", function () {
-    repairExportQrButtonOnly();
-  });
-
-  function repairExportQrButtonOnly() {
-    const exportQrBtn = document.getElementById("exportQrBtn");
-
-    if (!exportQrBtn) return;
-    if (exportQrBtn.dataset.repairQrBound === "true") return;
-
-exportQrBtn.addEventListener(
-  "click",
-  async function (event) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-
-    if (typeof syncRecordsFromFirebaseToLocalStorage === "function") {
-      await syncRecordsFromFirebaseToLocalStorage();
-    }
-
-    if (typeof loadRecordsLocalStorage === "function") {
-      loadRecordsLocalStorage();
-    }
-
-    const selectedCheckboxes = Array.from(
-      document.querySelectorAll(".record-checkbox:checked")
-    );
-
-    if (selectedCheckboxes.length === 0) {
-      safeQrNotify("Please select 1 record", "error");
-      return;
-    }
-
-    if (selectedCheckboxes.length > 1) {
-      safeQrNotify("Please select only one record to generate QR", "error");
-      return;
-    }
-
-    const selectedCheckbox = selectedCheckboxes[0];
-    const selectedId = selectedCheckbox.dataset.id;
-    const selectedIndex = Number(selectedCheckbox.dataset.index);
-
-    const records = Array.isArray(patientRecords) ? patientRecords : [];
-
-    const record =
-      records.find(function (item) {
-        return String(item.id) === String(selectedId);
-      }) || records[selectedIndex];
-
-    if (!record) {
-      safeQrNotify("Selected record not found. Please refresh and try again.", "error");
-      return;
-    }
-
-    openQrModalRepair(record);
-  },
-  true
-);
-
-    exportQrBtn.dataset.repairQrBound = "true";
-  }
-
-  function openQrModalRepair(record) {
-    const modal = document.getElementById("qrModal");
-    const qrBox = document.getElementById("qrCodeBox");
-
-    if (!modal || !qrBox) {
-      safeQrNotify("QR modal HTML is missing.", "error");
-      return;
-    }
-
-    if (typeof QRCode === "undefined") {
-      safeQrNotify("QR library not loaded.", "error");
-      return;
-    }
-
-    document.querySelectorAll(".fc-login-modal").forEach(function (item) {
-      item.classList.add("hidden");
-      item.style.display = "";
-    });
-
-    qrBox.innerHTML = "";
-
-    const baseUrl = window.location.origin + window.location.pathname;
-    const qrUrl =
-      baseUrl +
-      "?view=patient&id=" +
-      encodeURIComponent(record.id || "");
-
-    new QRCode(qrBox, {
-      text: qrUrl,
-      width: 200,
-      height: 200,
-      correctLevel: QRCode.CorrectLevel.H
-    });
-
-    const qrPatientName = document.getElementById("qrPatientName");
-    const qrPatientDetails = document.getElementById("qrPatientDetails");
-
-    if (qrPatientName) {
-      qrPatientName.textContent = record.petName || "Patient Record";
-    }
-
-    if (qrPatientDetails) {
-      qrPatientDetails.textContent =
-        (record.ownerName || "-") + " • " + (record.appointmentType || "-");
-    }
-
-    modal.classList.remove("hidden");
-    modal.style.display = "flex";
-  }
-
-  function safeQrNotify(message, type) {
-    if (typeof showNotification === "function") {
-      showNotification(message, type || "success");
-      return;
-    }
-
-    alert(message);
-  }
-})();
-
-/* =========================================================
-   EMERGENCY REPAIR: KEEP APPOINTMENT DETAILS IN PET RECORDS
-   Paste at VERY BOTTOM of records.js
-========================================================= */
-
-function isEmptyAppointmentValue(value) {
-  return value === undefined || value === null || String(value).trim() === "";
-}
-
-function getRecordAppointmentDate(record) {
-  if (!record) return "";
-  return !isEmptyAppointmentValue(record.appointmentDate)
-    ? record.appointmentDate
-    : record.lastAppointmentDate || "";
-}
-
-function getRecordAppointmentTime(record) {
-  if (!record) return "";
-  return !isEmptyAppointmentValue(record.appointmentTime)
-    ? record.appointmentTime
-    : record.lastAppointmentTime || "";
-}
-
-function getRecordAppointmentType(record) {
-  if (!record) return "";
-  return !isEmptyAppointmentValue(record.appointmentType)
-    ? record.appointmentType
-    : record.lastAppointmentType || record.service || "";
-}
-
-function getRecordAppointmentStatus(record) {
-  if (!record) return "Waiting";
-  return !isEmptyAppointmentValue(record.appointmentStatus)
-    ? record.appointmentStatus
-    : record.lastAppointmentStatus || "Waiting";
-}
-
-/* Override original createActivePatientRecord */
-function createActivePatientRecord(record) {
-  const appointmentDate = getRecordAppointmentDate(record);
-  const appointmentTime = getRecordAppointmentTime(record);
-  const appointmentType = getRecordAppointmentType(record);
-  const appointmentStatus = getRecordAppointmentStatus(record);
-
-  return {
-    ...record,
-
-    appointmentDate,
-    appointmentTime,
-    appointmentType,
-    appointmentStatus,
-
-    lastAppointmentDate: record.lastAppointmentDate || appointmentDate,
-    lastAppointmentTime: record.lastAppointmentTime || appointmentTime,
-    lastAppointmentType: record.lastAppointmentType || appointmentType,
-    lastAppointmentStatus: record.lastAppointmentStatus || appointmentStatus,
-
-    appointmentArchived: false,
-    archived: false,
-    isArchived: false
-  };
-}
-
-/* Override original createArchivedPatientRecord */
-function createArchivedPatientRecord(record) {
-  const archivedAt =
-    record.archivedAt ||
-    record.appointmentArchivedAt ||
-    record.dateArchived ||
-    new Date().toISOString();
-
-  const appointmentDate = getRecordAppointmentDate(record);
-  const appointmentTime = getRecordAppointmentTime(record);
-  const appointmentType = getRecordAppointmentType(record);
-  const appointmentStatus = getRecordAppointmentStatus(record);
-
-  return {
-    ...record,
-
-    appointmentDate,
-    appointmentTime,
-    appointmentType,
-    appointmentStatus,
-
-    lastAppointmentDate: record.lastAppointmentDate || appointmentDate,
-    lastAppointmentTime: record.lastAppointmentTime || appointmentTime,
-    lastAppointmentType: record.lastAppointmentType || appointmentType,
-    lastAppointmentStatus: record.lastAppointmentStatus || appointmentStatus,
-
-    appointmentArchived: true,
-    archived: true,
-    isArchived: true,
-    archivedAt,
-    appointmentArchivedAt: archivedAt,
-    dateArchived: archivedAt,
-    status: record.status || "Archived"
-  };
-}
-
-/* Override original saveArchivedAppointmentLog */
-function saveArchivedAppointmentLog(record) {
-  const archivedAppointments = getLocalStorageArray(RECORDS_STORAGE_KEYS.archivedAppointments);
-
-  const archivedLog = {
-    id: record.id || "",
-    petName: record.petName || "",
-    petBreed: record.petBreed || record.breed || "",
-    ownerName: record.ownerName || "",
-    ownerContact: record.ownerContact || record.contactNumber || "",
-    appointmentDate: getRecordAppointmentDate(record),
-    appointmentTime: getRecordAppointmentTime(record),
-    appointmentType: getRecordAppointmentType(record),
-    appointmentStatus: getRecordAppointmentStatus(record) || "Finished",
-    notes: record.notes || record.internalNotes || "",
-    archivedAt: record.archivedAt || record.appointmentArchivedAt || new Date().toISOString()
-  };
-
-  const duplicate = archivedAppointments.some(function (item) {
-    return (
-      String(item.id) === String(archivedLog.id) &&
-      String(item.appointmentDate || "") === String(archivedLog.appointmentDate || "") &&
-      String(item.appointmentTime || "") === String(archivedLog.appointmentTime || "") &&
-      String(item.appointmentType || "") === String(archivedLog.appointmentType || "")
-    );
-  });
-
-  if (!duplicate) {
-    archivedAppointments.unshift(archivedLog);
-    setLocalStorageArray(RECORDS_STORAGE_KEYS.archivedAppointments, archivedAppointments);
-  }
-}
-
-/* Repair already affected records in localStorage */
-function repairPatientRecordAppointmentFallbacks() {
-  const records = getLocalStorageArray(RECORDS_STORAGE_KEYS.patientRecords);
-
-  let changed = false;
-
-  const repairedRecords = records.map(function (record) {
-    const appointmentDate = getRecordAppointmentDate(record);
-    const appointmentTime = getRecordAppointmentTime(record);
-    const appointmentType = getRecordAppointmentType(record);
-    const appointmentStatus = getRecordAppointmentStatus(record);
-
-    const needsRepair =
-      (isEmptyAppointmentValue(record.appointmentDate) && !isEmptyAppointmentValue(appointmentDate)) ||
-      (isEmptyAppointmentValue(record.appointmentTime) && !isEmptyAppointmentValue(appointmentTime)) ||
-      (isEmptyAppointmentValue(record.appointmentType) && !isEmptyAppointmentValue(appointmentType));
-
-    if (!needsRepair) {
-      return record;
-    }
-
-    changed = true;
-
-    return {
-      ...record,
-
-      appointmentDate,
-      appointmentTime,
-      appointmentType,
-      appointmentStatus,
-
-      lastAppointmentDate: record.lastAppointmentDate || appointmentDate,
-      lastAppointmentTime: record.lastAppointmentTime || appointmentTime,
-      lastAppointmentType: record.lastAppointmentType || appointmentType,
-      lastAppointmentStatus: record.lastAppointmentStatus || appointmentStatus,
-
-      appointmentRepairAt: new Date().toISOString()
-    };
-  });
-
-  if (changed) {
-    setLocalStorageArray(RECORDS_STORAGE_KEYS.patientRecords, repairedRecords);
-  }
-}
-
-/* Run repair after page load */
-document.addEventListener("DOMContentLoaded", function () {
-  repairPatientRecordAppointmentFallbacks();
-
-  if (document.getElementById("recordsTableBody")) {
-    loadRecordsLocalStorage();
-    renderActiveRecords();
-  }
-});
-
-/* =========================================================
-   REPAIR: EXPORT EXCEL BUTTON FOR PET RECORDS
-   Paste at VERY BOTTOM of records.js
-========================================================= */
-
-(function () {
-  document.addEventListener("DOMContentLoaded", function () {
-    repairExportExcelButton();
-  });
-
-  function repairExportExcelButton() {
-    const exportExcelBtn =
-      document.getElementById("exportExcelBtn") ||
-      document.getElementById("exportRecordsExcelBtn") ||
-      Array.from(document.querySelectorAll("button, a")).find(function (btn) {
-        return String(btn.textContent || "").trim().toUpperCase().includes("EXPORT EXCEL");
-      });
-
-    if (!exportExcelBtn) return;
-    if (exportExcelBtn.dataset.excelBound === "true") return;
-
-    exportExcelBtn.addEventListener("click", async function (event) {
-      event.preventDefault();
-      event.stopPropagation();
-
-      await exportPetRecordsToExcel();
-    });
-
-    exportExcelBtn.dataset.excelBound = "true";
-  }
-
-async function exportPetRecordsToExcel() {
-  if (typeof syncRecordsFromFirebaseToLocalStorage === "function") {
-    await syncRecordsFromFirebaseToLocalStorage();
-  }
-
-  if (typeof loadRecordsLocalStorage === "function") {
-    loadRecordsLocalStorage();
-  }
-
-  const records = Array.isArray(patientRecords)
-    ? patientRecords.filter(function (record) {
-        return typeof isPatientRecordArchived === "function"
-          ? !isPatientRecordArchived(record)
-          : true;
-      })
-    : [];
-
-  if (records.length === 0) {
-    if (typeof showNotification === "function") {
-      showNotification("No pet records to export.", "error");
-    } else {
-      alert("No pet records to export.");
-    }
-
-    return;
-  }
-
-  const rows = records.map(function (record) {
-    return {
-      ID: record.id || "",
-      "Pet Name": record.petName || "",
-      "Pet Species": record.petSpecies || "",
-      Breed: record.breed || record.petBreed || "",
-      "Owner Name": record.ownerName || "",
-      "Contact Number": record.contactNumber || record.ownerContact || "",
-      Email: record.email || "",
-      Appointment: record.appointmentType || record.lastAppointmentType || "",
-      "Appointment Date": record.appointmentDate || record.lastAppointmentDate || "",
-      "Appointment Time": formatExcelAppointmentTime(
-        record.appointmentTime || record.lastAppointmentTime || ""
-      ),
-      Status: record.appointmentStatus || record.lastAppointmentStatus || "Waiting",
-      Gender: record.gender || "",
-      Age: record.age || "",
-      Weight: record.weight || "",
-      Notes: record.notes || record.internalNotes || ""
-    };
-  });
-
-  if (typeof XLSX !== "undefined") {
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Pet Records");
-    XLSX.writeFile(workbook, "pet-records.xlsx");
-
-    if (typeof showNotification === "function") {
-      showNotification("Pet records exported successfully.");
-    }
-
-    return;
-  }
-
-  exportPetRecordsToCSV(rows);
-}
-
-  function exportPetRecordsToCSV(rows) {
-    const headers = Object.keys(rows[0]);
-
-    const csvRows = [
-      headers.join(","),
-      ...rows.map(function (row) {
-        return headers
-          .map(function (header) {
-            return `"${String(row[header] || "").replaceAll('"', '""')}"`
-          })
-          .join(",");
-      })
-    ];
-
-    const blob = new Blob([csvRows.join("\n")], {
-      type: "text/csv;charset=utf-8;"
-    });
-
-    const link = document.createElement("a");
-    const dateKey = new Date().toISOString().slice(0, 10);
-
-    link.href = URL.createObjectURL(blob);
-    link.download = `pet-records-${dateKey}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    URL.revokeObjectURL(link.href);
-
-    if (typeof showNotification === "function") {
-      showNotification("Pet records exported as CSV.");
-    }
-  }
-
-  function formatExcelAppointmentTime(time) {
-    if (!time) return "";
-
-    if (typeof formatTime === "function") {
-      return formatTime(time);
-    }
-
-    return String(time);
-  }
-})();
-
-/* =========================================================
-   PATIENT PORTAL PATCH
-   - Edit profile picture
-   - Functional notification bell for QR / patient portal
-   Paste at VERY BOTTOM of records.js
-========================================================= */
-
-(function () {
-  const PORTAL_NOTIF_STORAGE_KEY = "patientPortalNotificationSeenMap";
-
-  const originalRenderPatientAccountView = window.renderPatientAccountView;
-
-  if (typeof originalRenderPatientAccountView === "function") {
-    window.renderPatientAccountView = function (patient) {
-      originalRenderPatientAccountView(patient);
-
-      injectPatientPortalEnhancements();
-      bindPatientPortalEnhancements();
-      renderPatientPortalNotifications(patient);
-    };
-  }
-
-  document.addEventListener("DOMContentLoaded", function () {
-    injectPatientPortalEnhancements();
-    bindPatientPortalEnhancements();
-
-    const patient = getCurrentPatientForLogin?.();
-    if (patient) {
-      renderPatientPortalNotifications(patient);
-    }
-  });
-
-  function injectPatientPortalEnhancements() {
-    const accountView = document.getElementById("patientAccountView");
-    if (!accountView) return;
-
-    injectPatientPortalBell(accountView);
-    injectPatientPortalNotificationPanel(accountView);
-    injectPatientAvatarEditButton(accountView);
-  }
-
-  function injectPatientPortalBell(accountView) {
-    const topbar = accountView.querySelector(".fc-topbar");
-    if (!topbar) return;
-
-    const existingBell = document.getElementById("patientPortalNotifBtn");
-    if (existingBell) return;
-
-    const rightTarget =
-      topbar.querySelector(".fc-soft-plus") ||
-      topbar.querySelector(".fc-bell-btn") ||
-      topbar.querySelector(".fc-notif-btn");
-
-    const bellHTML = `
-      <button type="button" id="patientPortalNotifBtn" class="fc-bell-btn" aria-label="Notifications">
-        <i class="bi bi-bell-fill"></i>
-        <span id="patientPortalNotifBadge" class="fc-notif-badge hidden">0</span>
-      </button>
-    `;
-
-    if (rightTarget) {
-      rightTarget.outerHTML = bellHTML;
-    } else {
-      topbar.insertAdjacentHTML("beforeend", bellHTML);
-    }
-  }
-
-  function injectPatientPortalNotificationPanel(accountView) {
-    if (document.getElementById("patientPortalNotifPanel")) return;
-
-    accountView.insertAdjacentHTML(
-      "beforeend",
-      `
-      <div id="patientPortalNotifPanel" class="fc-notif-panel hidden">
-        <div class="fc-notif-panel-header">
-          <div>
-            <h3>Notifications</h3>
-            <p>Appointment and rebooking updates</p>
-          </div>
-
-          <button type="button" id="patientPortalNotifClose" class="fc-notif-close-btn">
-            <i class="bi bi-x-lg"></i>
-          </button>
-        </div>
-
-        <div id="patientPortalNotifList" class="fc-notif-list"></div>
-
-        <div id="patientPortalNotifEmpty" class="fc-notif-empty hidden">
-          No updates yet.
-        </div>
-      </div>
-      `
-    );
-  }
-
-  function injectPatientAvatarEditButton(accountView) {
-    const avatarWrap =
-      document.getElementById("accountPatientAvatarWrap") ||
-      accountView.querySelector(".fc-avatar") ||
-      accountView.querySelector(".account-avatar");
-
-    if (!avatarWrap) return;
-
-    if (!document.getElementById("accountAvatarEditBtn")) {
-      avatarWrap.insertAdjacentHTML(
-        "beforeend",
-        `
-        <button type="button" id="accountAvatarEditBtn" class="fc-avatar-edit-btn" aria-label="Edit Picture">
-          <i class="bi bi-camera-fill"></i>
-        </button>
-        `
-      );
-    }
-
-    if (!document.getElementById("accountAvatarFileInput")) {
-      avatarWrap.insertAdjacentHTML(
-        "afterend",
-        `
-        <input
-          type="file"
-          id="accountAvatarFileInput"
-          accept="image/*"
-          class="hidden"
-        >
-        `
-      );
-    }
-  }
-
-  function bindPatientPortalEnhancements() {
-    const notifBtn = document.getElementById("patientPortalNotifBtn");
-    const notifPanel = document.getElementById("patientPortalNotifPanel");
-    const notifClose = document.getElementById("patientPortalNotifClose");
-    const avatarEditBtn = document.getElementById("accountAvatarEditBtn");
-    const avatarFileInput = document.getElementById("accountAvatarFileInput");
-
-    if (notifBtn && notifBtn.dataset.bound !== "true") {
-      notifBtn.addEventListener("click", function (event) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        const patient = getCurrentPatientForLogin?.();
-        if (!patient) return;
-
-        renderPatientPortalNotifications(patient);
-
-        notifPanel?.classList.toggle("hidden");
-
-        if (!notifPanel?.classList.contains("hidden")) {
-          markPatientNotificationsAsSeen(String(patient.id || ""));
-          updatePatientPortalNotificationBadge(patient);
-        }
-      });
-
-      notifBtn.dataset.bound = "true";
-    }
-
-    if (notifClose && notifClose.dataset.bound !== "true") {
-      notifClose.addEventListener("click", function () {
-        notifPanel?.classList.add("hidden");
-      });
-
-      notifClose.dataset.bound = "true";
-    }
-
-    if (avatarEditBtn && avatarEditBtn.dataset.bound !== "true") {
-      avatarEditBtn.addEventListener("click", function (event) {
-        event.preventDefault();
-        event.stopPropagation();
-        avatarFileInput?.click();
-      });
-
-      avatarEditBtn.dataset.bound = "true";
-    }
-
-    if (avatarFileInput && avatarFileInput.dataset.bound !== "true") {
-      avatarFileInput.addEventListener("change", handlePatientAvatarEditUpload);
-      avatarFileInput.dataset.bound = "true";
-    }
-
-    if (!document.body.dataset.portalNotifOutsideBound) {
-      document.addEventListener("click", function (event) {
-        const panel = document.getElementById("patientPortalNotifPanel");
-        const btn = document.getElementById("patientPortalNotifBtn");
-
-        if (!panel || panel.classList.contains("hidden")) return;
-
-        if (
-          panel.contains(event.target) ||
-          (btn && btn.contains(event.target))
-        ) {
-          return;
-        }
-
-        panel.classList.add("hidden");
-      });
-
-      document.body.dataset.portalNotifOutsideBound = "true";
-    }
-  }
-
-  function handlePatientAvatarEditUpload(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      showNotification?.("Please select a valid image file.", "error");
-      event.target.value = "";
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = function (loadEvent) {
-      const imageData = loadEvent.target.result;
-      const patient = getCurrentPatientForLogin?.();
-
-      if (!patient) {
-        showNotification?.("Patient record not found.", "error");
-        return;
-      }
-
-      const updatedPatient = updateCurrentPatientRecord?.(
-        {
-          petImage: imageData
-        },
-        "Updated Profile Photo",
-        `${patient.petName || "Patient"} updated profile photo`
-      );
-
-      if (updatedPatient) {
-        const publicImg = document.getElementById("publicPatientAvatarImg");
-        const publicLetter = document.getElementById("publicPatientAvatarLetter");
-        const accountImg = document.getElementById("accountPatientAvatarImg");
-        const accountLetter = document.getElementById("accountPatientAvatarLetter");
-
-        if (publicImg && publicLetter) {
-          publicImg.src = imageData;
-          publicImg.classList.remove("hidden");
-          publicLetter.classList.add("hidden");
-        }
-
-        if (accountImg && accountLetter) {
-          accountImg.src = imageData;
-          accountImg.classList.remove("hidden");
-          accountLetter.classList.add("hidden");
-        }
-
-        showNotification?.("Profile picture updated successfully.");
-      }
-    };
-
-    reader.readAsDataURL(file);
-    event.target.value = "";
-  }
-
-  function renderPatientPortalNotifications(patient) {
-    const list = document.getElementById("patientPortalNotifList");
-    const empty = document.getElementById("patientPortalNotifEmpty");
-
-    if (!list || !empty || !patient) return;
-
-    const notifications = getPatientPortalNotifications(patient);
-
-    list.innerHTML = "";
-
-    if (notifications.length === 0) {
-      empty.classList.remove("hidden");
-    } else {
-      empty.classList.add("hidden");
-
-      notifications.forEach(function (item) {
-        const card = document.createElement("div");
-        card.className = `fc-notif-item fc-notif-${item.type || "info"}`;
-
-        card.innerHTML = `
-          <div class="fc-notif-item-icon">
-            <i class="${escapeHTML(getPatientPortalNotificationIcon(item.type))}"></i>
-          </div>
-
-          <div class="fc-notif-item-body">
-            <strong>${escapeHTML(item.title || "Update")}</strong>
-            <p>${escapeHTML(item.message || "")}</p>
-            <small>${escapeHTML(formatPatientPortalNotificationDate(item.date))}</small>
-          </div>
-        `;
-
-        list.appendChild(card);
-      });
-    }
-
-    updatePatientPortalNotificationBadge(patient, notifications);
-  }
-
-  function getPatientPortalNotifications(patient) {
-    loadRecordsLocalStorage?.();
-
-    const patientId = String(patient.id || "");
-    const notifications = [];
-
-    if (patient.appointmentDate) {
-      notifications.push({
-        key: `current-${patientId}-${patient.appointmentDate}-${patient.appointmentTime || ""}`,
-        type: normalizeAppointmentStatusType(patient.appointmentStatus),
-        title: "Current Appointment",
-        message: `${patient.appointmentType || "Appointment"} • ${formatScheduleSafe(
-          patient.appointmentDate,
-          patient.appointmentTime
-        )} • Status: ${patient.appointmentStatus || "Waiting"}`,
-        date:
-          patient.appointmentUpdatedAt ||
-          patient.updatedAt ||
-          patient.createdAt ||
-          new Date().toISOString()
-      });
-    }
-
-    const patientRequests = (onlineAppointmentRequests || [])
-      .filter(function (request) {
-        return String(request.patientId || request.id || "") === patientId;
-      })
-      .sort(function (a, b) {
-        return new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0);
-      });
-
-    patientRequests.forEach(function (request) {
-      const status = String(request.status || "Pending");
-      const requestService = request.service || request.appointmentType || "Appointment";
-      const requestSchedule = formatScheduleSafe(
-        request.requestedDate || request.appointmentDate,
-        request.requestedTime || request.appointmentTime
-      );
-
-      notifications.push({
-        key: `request-${request.requestId || request.id}-${status}-${requestSchedule}`,
-        type: normalizeRequestStatusType(status),
-        title: `Rebooking Request • ${status}`,
-        message: `${requestService} • ${requestSchedule}`,
-        date: request.updatedAt || request.createdAt || new Date().toISOString()
-      });
-    });
-
-    const archivedAppointments = getLocalStorageArray?.(RECORDS_STORAGE_KEYS.archivedAppointments) || [];
-
-    archivedAppointments
-      .filter(function (item) {
-        return String(item.id || item.patientId || "") === patientId;
-      })
-      .sort(function (a, b) {
-        return new Date(b.archivedAt || b.updatedAt || 0) - new Date(a.archivedAt || a.updatedAt || 0);
-      })
-      .slice(0, 3)
-      .forEach(function (item) {
-        notifications.push({
-          key: `archived-${item.id}-${item.appointmentDate}-${item.appointmentTime}`,
-          type: "success",
-          title: "Completed Appointment",
-          message: `${item.appointmentType || "Appointment"} • ${formatScheduleSafe(
-            item.appointmentDate,
-            item.appointmentTime
-          )}`,
-          date: item.archivedAt || item.updatedAt || new Date().toISOString()
-        });
-      });
-
-    return notifications.sort(function (a, b) {
-      return new Date(b.date || 0) - new Date(a.date || 0);
-    });
-  }
-
-  function updatePatientPortalNotificationBadge(patient, notifications = null) {
-    const badge = document.getElementById("patientPortalNotifBadge");
-    if (!badge || !patient) return;
-
-    const patientId = String(patient.id || "");
-    const notificationItems = Array.isArray(notifications)
-      ? notifications
-      : getPatientPortalNotifications(patient);
-
-    const seenMap = getPatientPortalSeenMap();
-    const seenTime = new Date(seenMap[patientId] || 0).getTime();
-
-    const unreadCount = notificationItems.filter(function (item) {
-      return new Date(item.date || 0).getTime() > seenTime;
-    }).length;
-
-    if (unreadCount > 0) {
-      badge.textContent = unreadCount > 9 ? "9+" : String(unreadCount);
-      badge.classList.remove("hidden");
-    } else {
-      badge.textContent = "0";
-      badge.classList.add("hidden");
-    }
-  }
-
-  function markPatientNotificationsAsSeen(patientId) {
-    if (!patientId) return;
-
-    const seenMap = getPatientPortalSeenMap();
-    seenMap[patientId] = new Date().toISOString();
-    localStorage.setItem(PORTAL_NOTIF_STORAGE_KEY, JSON.stringify(seenMap));
-  }
-
-  function getPatientPortalSeenMap() {
-    try {
-      const raw = localStorage.getItem(PORTAL_NOTIF_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : {};
-      return parsed && typeof parsed === "object" ? parsed : {};
-    } catch (error) {
-      return {};
-    }
-  }
-
-  function normalizeRequestStatusType(status) {
-    const text = String(status || "").toLowerCase();
-
-    if (text.includes("approved")) return "success";
-    if (text.includes("reject") || text.includes("decline")) return "danger";
-    if (text.includes("pending")) return "warning";
-
-    return "info";
-  }
-
-  function normalizeAppointmentStatusType(status) {
-    const text = String(status || "").toLowerCase();
-
-    if (text.includes("finished")) return "success";
-    if (text.includes("ongoing")) return "info";
-    if (text.includes("waiting")) return "warning";
-
-    return "info";
-  }
-
-  function getPatientPortalNotificationIcon(type) {
-    if (type === "success") return "bi bi-check-circle-fill";
-    if (type === "danger") return "bi bi-x-circle-fill";
-    if (type === "warning") return "bi bi-hourglass-split";
-    return "bi bi-bell-fill";
-  }
-
-  function formatScheduleSafe(date, time) {
-    if (typeof formatSchedule === "function") {
-      return formatSchedule(date, time);
-    }
-
-    return [date || "", time || ""].filter(Boolean).join(" ");
-  }
-
-  function formatPatientPortalNotificationDate(dateValue) {
-    if (!dateValue) return "Just now";
-
-    const date = new Date(dateValue);
-    if (Number.isNaN(date.getTime())) return "Just now";
-
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMinutes = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMinutes < 1) return "Just now";
-    if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes === 1 ? "" : "s"} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
-
-    return date.toLocaleString("en-PH", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit"
-    });
-  }
-})();
-
-/* =========================================================
-   FINAL AVATAR CLEAN FIX
-   Removes all circles/badges inside avatar
-   Adds clean Edit Picture button outside avatar
-========================================================= */
-
-(function () {
-  document.addEventListener("DOMContentLoaded", function () {
-    setTimeout(fixPatientAccountAvatarClean, 300);
-    setTimeout(fixPatientAccountAvatarClean, 1000);
-  });
-
-  const oldRenderPatientAccountView = window.renderPatientAccountView;
-
-  if (typeof oldRenderPatientAccountView === "function") {
-    window.renderPatientAccountView = function (patient) {
-      oldRenderPatientAccountView(patient);
-
-      setTimeout(fixPatientAccountAvatarClean, 100);
-      setTimeout(fixPatientAccountAvatarClean, 500);
-    };
-  }
-
-  function fixPatientAccountAvatarClean() {
-    const avatarWrap =
-      document.getElementById("accountPatientAvatarWrap") ||
-      document.querySelector("#patientAccountView .fc-avatar");
-
-    if (!avatarWrap) return;
-
-    const avatarImg = document.getElementById("accountPatientAvatarImg");
-    const avatarLetter = document.getElementById("accountPatientAvatarLetter");
-
-    /*
-      Remove every extra badge/circle/button inside avatar.
-      Keep only image and letter.
-    */
-    Array.from(avatarWrap.children).forEach(function (child) {
-      if (child === avatarImg || child === avatarLetter) return;
-      child.remove();
-    });
-
-    /*
-      Add clean external edit picture button outside the avatar,
-      not overlapping the image.
-    */
-    if (!document.getElementById("cleanAccountEditPhotoBtn")) {
-      avatarWrap.insertAdjacentHTML(
-        "afterend",
-        `
-        <button type="button" id="cleanAccountEditPhotoBtn" class="clean-account-edit-photo-btn">
-          <i class="bi bi-camera-fill"></i>
-          Edit Picture
-        </button>
-        `
-      );
-    }
-
-    if (!document.getElementById("cleanAccountEditPhotoInput")) {
-      avatarWrap.insertAdjacentHTML(
-        "afterend",
-        `
-        <input type="file" id="cleanAccountEditPhotoInput" accept="image/*" class="hidden">
-        `
-      );
-    }
-
-    const editBtn = document.getElementById("cleanAccountEditPhotoBtn");
-    const fileInput = document.getElementById("cleanAccountEditPhotoInput");
-
-    if (editBtn && editBtn.dataset.bound !== "true") {
-      editBtn.addEventListener("click", function () {
-        fileInput?.click();
-      });
-
-      editBtn.dataset.bound = "true";
-    }
-
-    if (fileInput && fileInput.dataset.bound !== "true") {
-      fileInput.addEventListener("change", function (event) {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        if (!file.type.startsWith("image/")) {
-          showNotification?.("Please select a valid image file.", "error");
-          event.target.value = "";
-          return;
-        }
-
-        const reader = new FileReader();
-
-        reader.onload = function (loadEvent) {
-          const imageData = loadEvent.target.result;
-          const patient = getCurrentPatientForLogin?.();
-
-          if (!patient) {
-            showNotification?.("Patient record not found.", "error");
-            return;
-          }
-
-          const updatedPatient = updateCurrentPatientRecord?.(
-            { petImage: imageData },
-            "Updated Profile Photo",
-            `${patient.petName || "Patient"} updated profile photo`
-          );
-
-          if (updatedPatient) {
-            const img = document.getElementById("accountPatientAvatarImg");
-            const letter = document.getElementById("accountPatientAvatarLetter");
-
-            if (img && letter) {
-              img.src = imageData;
-              img.classList.remove("hidden");
-              letter.classList.add("hidden");
-            }
-
-            showNotification?.("Profile picture updated successfully.");
-          }
-        };
-
-        reader.readAsDataURL(file);
-        event.target.value = "";
-      });
-
-      fileInput.dataset.bound = "true";
-    }
-  }
-})();
-
-/* =========================================================
-   ACCOUNT SETTINGS MENU / FORM SWITCH
-========================================================= */
-
-function openSettingsForm(type) {
-  const menuCard = document.getElementById("settingsMenuCard");
-  const passwordForm = document.getElementById("settingsPasswordForm");
-  const ownerForm = document.getElementById("settingsOwnerForm");
-  const petForm = document.getElementById("settingsPetForm");
-
-  if (menuCard) menuCard.classList.add("hidden");
-  if (passwordForm) passwordForm.classList.add("hidden");
-  if (ownerForm) ownerForm.classList.add("hidden");
-  if (petForm) petForm.classList.add("hidden");
-
-  if (type === "password" && passwordForm) {
-    passwordForm.classList.remove("hidden");
-  }
-
-  if (type === "owner" && ownerForm) {
-    ownerForm.classList.remove("hidden");
-  }
-
-  if (type === "pet" && petForm) {
-    petForm.classList.remove("hidden");
-  }
-}
-
-function closeSettingsForms() {
-  const menuCard = document.getElementById("settingsMenuCard");
-  const passwordForm = document.getElementById("settingsPasswordForm");
-  const ownerForm = document.getElementById("settingsOwnerForm");
-  const petForm = document.getElementById("settingsPetForm");
-
-  if (menuCard) menuCard.classList.remove("hidden");
-  if (passwordForm) passwordForm.classList.add("hidden");
-  if (ownerForm) ownerForm.classList.add("hidden");
-  if (petForm) petForm.classList.add("hidden");
 }

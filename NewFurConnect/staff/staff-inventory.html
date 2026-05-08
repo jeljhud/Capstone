@@ -20,14 +20,9 @@
           <div class="text-center mb-5 brand-wrap">
             <img src="../pics/paw2.png" alt="paw" class="sidebar-logo mb-2">
             <h2 class="fw-bold">FurConnect</h2>
-
-            <div class="sidebar-role-label">
-              <i class="bi bi-person-badge me-1"></i>
-              Admin Panel
-            </div>
           </div>
 
-          <a href="dashboard.html" id="btn-dashboard" class="btn btn-light nav-btn-custom">Dashboard</a>
+          <a href="staff-dashboard.html" id="btn-dashboard" class="btn btn-light nav-btn-custom">Dashboard</a>
 
           <div class="appointment-nav-dropdown" id="appointmentDropdown">
             <button id="btn-appointment" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
@@ -36,9 +31,9 @@
             </button>
 
             <div class="appointment-dropdown-menu">
-              <a href="registration.html" class="dropdown-link-btn">Registration</a>
-              <a href="appointments.html" class="dropdown-link-btn">Appointments</a>
-              <a href="appointment-logs.html" class="dropdown-link-btn">Appointment Logs</a>
+              <a href="staff-registration.html" class="dropdown-link-btn">Registration</a>
+              <a href="staff-appointments.html" class="dropdown-link-btn">Appointments</a>
+              <a href="staff-appointment-logs.html" class="dropdown-link-btn">Appointment Logs</a>
             </div>
           </div>
 
@@ -49,8 +44,8 @@
             </button>
 
             <div class="appointment-dropdown-menu">
-              <a href="records.html" class="dropdown-link-btn">Pet Records</a>
-              <a href="archived-records.html" class="dropdown-link-btn">Archived Pet Records</a>
+              <a href="staff-records.html" class="dropdown-link-btn">Pet Records</a>
+              <a href="staff-archived-records.html" class="dropdown-link-btn">Archived Pet Records</a>
             </div>
           </div>
 
@@ -61,15 +56,14 @@
             </button>
 
             <div class="appointment-dropdown-menu">
-              <a href="inventory.html" class="dropdown-link-btn active">Inventory Items</a>
-              <a href="pos.html" class="dropdown-link-btn">Item Checkout</a>
-              <a href="sales-history.html" class="dropdown-link-btn">Sales History</a>
-              <a href="archived-inventory.html" class="dropdown-link-btn">Archived Inventory</a>
+              <a href="staff-inventory.html" class="dropdown-link-btn active">Inventory Items</a>
+              <a href="staff-pos.html" class="dropdown-link-btn">Item Checkout</a>
+              <a href="staff-sales-history.html" class="dropdown-link-btn">Sales History</a>
             </div>
           </div>
 
           <div class="logout-wrap">
-            <a href="login.html?logout=1" id="logoutBtn" class="btn btn-light nav-btn-custom">Logout</a>
+            <a href="/html/login.html?logout=1" id="logoutBtn" class="btn btn-light nav-btn-custom">Logout</a>
           </div>
         </div>
       </nav>
@@ -83,19 +77,7 @@
             </div>
 
             <div class="inventory-tools">
-<input type="text" class="form-control search-box" id="inventorySearch" placeholder="Search">
-
-<button class="btn btn-action px-4" type="button" id="addSelectedToCheckoutBtn">
-  Add to Item Checkout
-</button>
-
-<button class="btn btn-action px-4" data-bs-toggle="modal" data-bs-target="#addInventoryModal" type="button">
-  Add Item
-</button>
-
-              <button class="btn btn-action px-4" type="button" id="removeInventoryBtn">
-                Archive Item
-              </button>
+              <input type="text" class="form-control search-box" id="inventorySearch" placeholder="Search">
             </div>
           </div>
 
@@ -119,9 +101,6 @@
                   <table class="table custom-table align-middle">
                     <thead>
                       <tr>
-                        <th class="checkbox-col">
-                          <input type="checkbox" id="selectAllInventory">
-                        </th>
                         <th>ID</th>
                         <th>Item Name</th>
                         <th>Category</th>
@@ -129,13 +108,12 @@
                         <th>Price</th>
                         <th class="sortable-th" data-sort="expiration">Expiration</th>
                         <th class="sortable-th" data-sort="status">Status</th>
-                        <th>Action</th>
                       </tr>
                     </thead>
 
                     <tbody id="inventoryTableBody">
                       <tr id="emptyInventoryRow">
-                        <td colspan="9" class="text-center text-muted py-5">
+                        <td colspan="7" class="text-center text-muted py-5">
                           No inventory records found.
                         </td>
                       </tr>
@@ -202,12 +180,19 @@
                 <select class="form-select" id="unit" required>
                   <option value="">Select unit</option>
                   <option value="pcs">pcs</option>
+                  <option value="ml">mL</option>
+                  <option value="L">L</option>
+                  <option value="g">g</option>
+                  <option value="kg">kg</option>
                   <option value="bottle">bottle</option>
                   <option value="vial">vial</option>
                   <option value="tablet">tablet</option>
+                  <option value="capsule">capsule</option>
                   <option value="sachet">sachet</option>
+                  <option value="box">box</option>
                   <option value="pack">pack</option>
                   <option value="pair">pair</option>
+                  <option value="roll">roll</option>
                 </select>
               </div>
 
@@ -234,101 +219,6 @@
 
               <button type="submit" class="btn btn-primary">
                 Save Item
-              </button>
-            </div>
-
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- EDIT ITEM MODAL -->
-  <div class="modal fade" id="editInventoryModal" tabindex="-1" aria-labelledby="editInventoryModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content p-2">
-        <div class="modal-header border-0 pb-0">
-          <div>
-            <h2 class="modal-title fs-3 fw-bold" id="editInventoryModalLabel">Edit Item</h2>
-            <p class="text-muted mb-0">Update the selected inventory item details</p>
-          </div>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-
-        <div class="modal-body pt-3">
-          <form id="editInventoryForm">
-
-            <input type="hidden" id="editInventoryId">
-
-            <div class="mb-3">
-              <label for="editInventoryItemName" class="form-label fw-semibold">Item Name</label>
-              <input type="text" class="form-control" id="editInventoryItemName" required>
-            </div>
-
-            <div class="mb-3">
-              <label for="editInventoryItemDescription" class="form-label fw-semibold">Item Description</label>
-              <input type="text" class="form-control" id="editInventoryItemDescription" required>
-            </div>
-
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="editInventoryCategory" class="form-label fw-semibold">Category</label>
-                <select class="form-select" id="editInventoryCategory" required>
-                  <option value="">Select category</option>
-                  <option value="Grooming Supplies">Grooming Supplies</option>
-                  <option value="Medicine">Medicine</option>
-                  <option value="Deworming Medicine">Deworming Medicine</option>
-                  <option value="Vaccine">Vaccine</option>
-                  <option value="Surgery Supplies">Surgery Supplies</option>
-                  <option value="Clinic Supplies">Clinic Supplies</option>
-                  <option value="Retail Products">Retail Products</option>
-                </select>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label for="editInventoryQuantity" class="form-label fw-semibold">Quantity</label>
-                <input type="number" class="form-control" id="editInventoryQuantity" min="0" step="0.1" required>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="editInventoryUnit" class="form-label fw-semibold">Unit</label>
-<select class="form-select" id="editInventoryUnit" required>
-  <option value="">Select unit</option>
-  <option value="pcs">pcs</option>
-  <option value="bottle">bottle</option>
-  <option value="vial">vial</option>
-  <option value="tablet">tablet</option>
-  <option value="sachet">sachet</option>
-  <option value="pack">pack</option>
-  <option value="pair">pair</option>
-</select>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label for="editInventoryExpirationDate" class="form-label fw-semibold">Expiration Date</label>
-                <input type="month" class="form-control" id="editInventoryExpirationDate" required>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="editInventoryPrice" class="form-label fw-semibold">Selling Price</label>
-                <div class="input-group">
-                  <span class="input-group-text">₱</span>
-                  <input type="number" class="form-control" id="editInventoryPrice" min="0" step="0.01" placeholder="0.00">
-                </div>
-              </div>
-            </div>
-
-            <div class="d-flex justify-content-end gap-2 mt-4">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                Cancel
-              </button>
-
-              <button type="submit" class="btn btn-primary">
-                Save Changes
               </button>
             </div>
 

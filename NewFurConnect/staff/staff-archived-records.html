@@ -6,8 +6,8 @@
   <title>FurConnect | Archived Records</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link rel="stylesheet" href="../css/styles.css">
 </head>
 <body>
@@ -15,19 +15,14 @@
 <section id="mainSystem">
   <div class="container-fluid p-0 overflow-hidden">
 
-      <nav class="sidebar">
-        <div class="sidebar-inner">
-<div class="text-center mb-5 brand-wrap">
-  <img src="../pics/paw2.png" alt="paw" class="sidebar-logo mb-2">
-  <h2 class="fw-bold">FurConnect</h2>
+    <nav class="sidebar">
+      <div class="sidebar-inner">
+        <div class="text-center mb-5 brand-wrap">
+          <img src="../pics/paw2.png" alt="paw" class="sidebar-logo mb-2">
+          <h2 class="fw-bold">FurConnect</h2>
+        </div>
 
-  <div class="sidebar-role-label">
-    <i class="bi bi-person-badge me-1"></i>
-    Admin Panel
-  </div>
-</div>
-
-        <a href="dashboard.html" id="btn-dashboard" class="btn btn-light nav-btn-custom">Dashboard</a>
+        <a href="staff-dashboard.html" id="btn-dashboard" class="btn btn-light nav-btn-custom">Dashboard</a>
 
         <div class="appointment-nav-dropdown" id="appointmentDropdown">
           <button id="btn-appointment" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
@@ -36,9 +31,9 @@
           </button>
 
             <div class="appointment-dropdown-menu">
-              <a href="registration.html" class="dropdown-link-btn">Registration</a>
-              <a href="appointments.html" class="dropdown-link-btn">Appointments</a>
-              <a href="appointment-logs.html" class="dropdown-link-btn">Appointment Logs</a>
+              <a href="staff-registration.html" class="dropdown-link-btn">Registration</a>
+              <a href="staff-appointments.html" class="dropdown-link-btn">Appointments</a>
+              <a href="staff-appointment-logs.html" class="dropdown-link-btn">Appointment Logs</a>
             </div>
           </div>
 
@@ -49,8 +44,8 @@
           </button>
 
           <div class="appointment-dropdown-menu">
-            <a href="records.html" class="dropdown-link-btn">Pet Records</a>
-            <a href="archived-records.html" class="dropdown-link-btn active">Archived Pet Records</a>
+            <a href="staff-records.html" class="dropdown-link-btn">Pet Records</a>
+            <a href="staff-archived-records.html" class="dropdown-link-btn active">Archived Pet Records</a>
           </div>
         </div>
 
@@ -61,10 +56,9 @@
   </button>
 
   <div class="appointment-dropdown-menu">
-    <a href="inventory.html" class="dropdown-link-btn">Inventory Items</a>
-    <a href="pos.html" class="dropdown-link-btn">Item Checkout</a>
-    <a href="sales-history.html" class="dropdown-link-btn">Sales History</a>
-    <a href="archived-inventory.html" class="dropdown-link-btn">Archived Inventory</a>
+    <a href="staff-inventory.html" class="dropdown-link-btn">Inventory Items</a>
+    <a href="staff-pos.html" class="dropdown-link-btn">Item Checkout</a>
+    <a href="staff-sales-history.html" class="dropdown-link-btn">Sales History</a>
   </div>
 </div>
 
@@ -86,7 +80,7 @@
         -->
 
 <div class="logout-wrap">
-  <a href="login.html?logout=1" id="logoutBtn" class="btn btn-light nav-btn-custom">Logout</a>
+  <a href="/html/login.html?logout=1" id="logoutBtn" class="btn btn-light nav-btn-custom">Logout</a>
 </div>
       </div>
     </nav>
@@ -103,9 +97,6 @@
           <div class="records-tools top-tools">
             <input type="text" class="form-control search-box" id="archivedRecordsSearch" placeholder="Search">
 
-            <button class="btn btn-action px-4" id="retrieveArchivedRecordsBtn" type="button">
-              Retrieve
-            </button>
           </div>
         </div>
 

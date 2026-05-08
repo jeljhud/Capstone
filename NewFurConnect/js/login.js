@@ -1,19 +1,94 @@
+const DEFAULT_LOGIN_ACCOUNTS = [
+  {
+    username: "admin",
+    password: "admin123",
+    role: "Admin"
+  },
+  {
+    username: "staff",
+    password: "staff123",
+    role: "Staff"
+  }
+];
+
+handleLogoutRedirect();
+redirectLoggedInUserAwayFromLogin();
+
 document.addEventListener("DOMContentLoaded", function () {
-  initializeLoginAccount();
+  initializeLoginAccounts();
   initializeLoginForm();
   initializePasswordToggle();
 });
 
-const DEFAULT_LOGIN_ACCOUNT = {
-  username: "admin",
-  password: "admin123"
-};
+window.addEventListener("pageshow", function () {
+  redirectLoggedInUserAwayFromLogin();
+});
 
-function initializeLoginAccount() {
-  const savedAccount = JSON.parse(localStorage.getItem("furconnectAccount"));
+function getDashboardPathByRole(role) {
+  if (role === "Admin") {
+    return "dashboard.html";
+  }
 
-  if (!savedAccount) {
-    localStorage.setItem("furconnectAccount", JSON.stringify(DEFAULT_LOGIN_ACCOUNT));
+  if (role === "Staff") {
+    return "../staff/staff-dashboard.html";
+  }
+
+  return "login.html";
+}
+
+function handleLogoutRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const isLogout = params.get("logout") === "1";
+
+  if (!isLogout) return;
+
+  localStorage.removeItem("furconnectLoggedIn");
+  localStorage.removeItem("furconnectUsername");
+  localStorage.removeItem("furconnectUserRole");
+
+  sessionStorage.removeItem("furconnectLoggedIn");
+  sessionStorage.removeItem("furconnectUsername");
+  sessionStorage.removeItem("furconnectUserRole");
+
+  window.history.replaceState({}, document.title, "login.html");
+}
+
+function redirectLoggedInUserAwayFromLogin() {
+  const params = new URLSearchParams(window.location.search);
+  const isLogout = params.get("logout") === "1";
+
+  if (isLogout) return;
+
+  const isLoggedIn = localStorage.getItem("furconnectLoggedIn") === "true";
+  const userRole = localStorage.getItem("furconnectUserRole");
+
+  if (!isLoggedIn) return;
+
+  const redirectPath = getDashboardPathByRole(userRole);
+
+  if (redirectPath === "login.html") {
+    localStorage.removeItem("furconnectLoggedIn");
+    localStorage.removeItem("furconnectUsername");
+    localStorage.removeItem("furconnectUserRole");
+    return;
+  }
+
+  window.location.replace(redirectPath);
+}
+
+function initializeLoginAccounts() {
+  const savedAccounts = getSavedAccounts();
+
+  if (!savedAccounts || savedAccounts.length === 0) {
+    localStorage.setItem("furconnectAccounts", JSON.stringify(DEFAULT_LOGIN_ACCOUNTS));
+  }
+}
+
+function getSavedAccounts() {
+  try {
+    return JSON.parse(localStorage.getItem("furconnectAccounts"));
+  } catch (error) {
+    return null;
   }
 }
 
@@ -22,26 +97,50 @@ function initializeLoginForm() {
 
   if (!loginForm) return;
 
+  loginForm.setAttribute("autocomplete", "off");
+
   loginForm.addEventListener("submit", function (event) {
     event.preventDefault();
 
-    const username = document.getElementById("loginUsername")?.value.trim();
-    const password = document.getElementById("loginPassword")?.value.trim();
+    const usernameInput = document.getElementById("loginUsername");
+    const passwordInput = document.getElementById("loginPassword");
+    const roleInput = document.getElementById("loginRole");
     const loginError = document.getElementById("loginError");
 
-    const savedAccount =
-      JSON.parse(localStorage.getItem("furconnectAccount")) || DEFAULT_LOGIN_ACCOUNT;
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
+    const role = roleInput.value;
 
-    if (username === savedAccount.username && password === savedAccount.password) {
-      localStorage.setItem("furconnectLoggedIn", "true");
-      window.location.href = "dashboard.html";
+    hideLoginError(loginError);
+
+    if (!username || !password || !role) {
+      showLoginError(loginError, "Please enter username, password, and role.");
       return;
     }
 
-    if (loginError) {
-      loginError.textContent = "Invalid username or password.";
-      loginError.classList.remove("hidden");
+    const savedAccounts = getSavedAccounts() || DEFAULT_LOGIN_ACCOUNTS;
+
+    const matchedAccount = savedAccounts.find(function (account) {
+      return (
+        account.username === username &&
+        account.password === password &&
+        account.role === role
+      );
+    });
+
+    if (!matchedAccount) {
+      showLoginError(loginError, "Invalid username, password, or role.");
+      return;
     }
+
+    localStorage.setItem("furconnectLoggedIn", "true");
+    localStorage.setItem("furconnectUsername", matchedAccount.username);
+    localStorage.setItem("furconnectUserRole", matchedAccount.role);
+
+    loginForm.reset();
+
+    const redirectPath = getDashboardPathByRole(matchedAccount.role);
+    window.location.replace(redirectPath);
   });
 }
 
@@ -60,4 +159,18 @@ function initializePasswordToggle() {
       ? '<i class="bi bi-eye-slash"></i>'
       : '<i class="bi bi-eye"></i>';
   });
+}
+
+function showLoginError(errorElement, message) {
+  if (!errorElement) return;
+
+  errorElement.textContent = message;
+  errorElement.classList.remove("hidden");
+}
+
+function hideLoginError(errorElement) {
+  if (!errorElement) return;
+
+  errorElement.textContent = "";
+  errorElement.classList.add("hidden");
 }

@@ -7,10 +7,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const isLoggedIn = localStorage.getItem("furconnectLoggedIn") === "true";
 
     if (isLoggedIn) {
-      window.location.href = "dashboard.html";
+      window.location.replace("html/dashboard.html");
       return;
     }
 
-    window.location.href = "login.html";
+    window.location.replace("html/login.html");
   });
 });

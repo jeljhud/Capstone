@@ -1,4 +1,7 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
+  await syncInventoryFromFirebaseToLocalStorage();
+
+  loadInventoryLocalStorage();
   renderInventoryRecords();
   initializeInventoryEvents();
 });
@@ -12,8 +15,306 @@ let inventoryCurrentFilter = "all";
 let inventoryCurrentSort = "";
 let inventorySortDirection = "asc";
 
-/* ================= NOTIFICATION ================= */
+/* ================= PAGE ROLE ================= */
+function isStaffInventoryPage() {
+  return window.location.pathname.toLowerCase().includes("staff-inventory.html");
+}
 
+function shouldShowSelectionColumn() {
+  return !!document.getElementById("selectAllInventory");
+}
+
+function shouldShowActionColumn() {
+  return !isStaffInventoryPage();
+}
+
+function getInventoryTableColspan() {
+  const headerCount = document.querySelectorAll(".custom-table thead th").length;
+
+  if (headerCount > 0) {
+    return headerCount;
+  }
+
+  if (isStaffInventoryPage()) {
+    return shouldShowSelectionColumn() ? 8 : 7;
+  }
+
+  return 9;
+}
+
+/* ================= LOCAL STORAGE ================= */
+const INVENTORY_STORAGE_KEYS = {
+  inventoryRecords: "inventoryRecords",
+  archivedInventoryRecords: "archivedInventoryRecords",
+  lowStockItems: "lowStockItems",
+  recentActivities: "recentActivities",
+  checkoutItems: "checkoutItems"
+};
+
+function getLocalStorageArray(key) {
+  try {
+    const storedData = localStorage.getItem(key);
+
+    if (!storedData) return [];
+
+    const parsedData = JSON.parse(storedData);
+
+    return Array.isArray(parsedData) ? parsedData : [];
+  } catch (error) {
+    console.error("LocalStorage read error:", error);
+    return [];
+  }
+}
+
+function setLocalStorageArray(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error("LocalStorage save error:", error);
+  }
+}
+
+function loadInventoryLocalStorage() {
+  inventoryRecords = getLocalStorageArray(INVENTORY_STORAGE_KEYS.inventoryRecords)
+    .filter(function (item) {
+      return !isInventoryArchived(item);
+    });
+}
+
+function saveInventoryLocalStorage() {
+  inventoryRecords = inventoryRecords.filter(function (item) {
+    return !isInventoryArchived(item);
+  });
+
+  setLocalStorageArray(INVENTORY_STORAGE_KEYS.inventoryRecords, inventoryRecords);
+  syncLowStockItemsToLocalStorage();
+}
+
+function syncLowStockItemsToLocalStorage() {
+  const lowStockItems = inventoryRecords
+    .filter(function (item) {
+      return !isInventoryArchived(item) && getInventoryStatus(item.quantity) === "Low Stock";
+    })
+    .map(function (item) {
+      return {
+        id: item.id,
+        itemName: item.itemName,
+        itemDescription: item.itemDescription,
+        category: item.category,
+        quantity: item.quantity,
+        unit: item.unit,
+        expirationDate: item.expirationDate,
+        price: item.price || 0,
+        status: getInventoryStatus(item.quantity)
+      };
+    });
+
+  setLocalStorageArray(INVENTORY_STORAGE_KEYS.lowStockItems, lowStockItems);
+}
+
+function saveRecentActivity(activity) {
+  const recentActivities = getLocalStorageArray(INVENTORY_STORAGE_KEYS.recentActivities);
+
+  recentActivities.unshift(activity);
+
+  setLocalStorageArray(INVENTORY_STORAGE_KEYS.recentActivities, recentActivities);
+}
+
+async function syncInventoryFromFirebaseToLocalStorage() {
+  if (!window.db) {
+    console.warn("Firestore is not ready. Using localStorage only.");
+    return;
+  }
+
+  try {
+    const inventorySnapshot = await window.db.collection("inventoryRecords").get();
+
+    const firebaseInventoryRecords = inventorySnapshot.docs.map(function (doc) {
+      const data = doc.data();
+
+      return {
+        firebaseDocId: doc.id,
+        ...data,
+        createdAt: normalizeFirebaseDate(data.createdAt),
+        updatedAt: normalizeFirebaseDate(data.updatedAt),
+        archivedAt: normalizeFirebaseDate(data.archivedAt),
+        archivedDate: normalizeFirebaseDate(data.archivedDate),
+        dateArchived: normalizeFirebaseDate(data.dateArchived)
+      };
+    });
+
+    const activeRecords = firebaseInventoryRecords.filter(function (item) {
+      return !isInventoryArchived(item);
+    });
+
+    const archivedRecords = firebaseInventoryRecords.filter(function (item) {
+      return isInventoryArchived(item);
+    });
+
+    setLocalStorageArray(INVENTORY_STORAGE_KEYS.inventoryRecords, activeRecords);
+    setLocalStorageArray(INVENTORY_STORAGE_KEYS.archivedInventoryRecords, archivedRecords);
+
+    inventoryRecords = activeRecords;
+    syncLowStockItemsToLocalStorage();
+
+    const checkoutSnapshot = await window.db.collection("checkoutItems").get();
+
+    const firebaseCheckoutItems = checkoutSnapshot.docs.map(function (doc) {
+      return {
+        firebaseDocId: doc.id,
+        ...doc.data()
+      };
+    });
+
+    setLocalStorageArray(INVENTORY_STORAGE_KEYS.checkoutItems, firebaseCheckoutItems);
+
+    console.log("Firebase inventory loaded:", firebaseInventoryRecords.length);
+  } catch (error) {
+    console.error("Firebase inventory load error:", error);
+    showNotification("Failed to load inventory from Firebase.", "warning");
+  }
+}
+
+function normalizeFirebaseDate(value) {
+  if (!value) return "";
+
+  if (value.toDate) {
+    return value.toDate().toISOString();
+  }
+
+  return value;
+}
+
+async function addInventoryItemToFirebase(item) {
+  if (!window.db) {
+    throw new Error("Firestore is not initialized.");
+  }
+
+  const docRef = await window.db.collection("inventoryRecords").add({
+    ...item,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  return docRef.id;
+}
+
+async function getInventoryFirebaseDocRef(itemOrId) {
+  if (!window.db) {
+    throw new Error("Firestore is not initialized.");
+  }
+
+  const firebaseDocId =
+    typeof itemOrId === "object" ? itemOrId.firebaseDocId : "";
+
+  const itemId =
+    typeof itemOrId === "object" ? itemOrId.id : itemOrId;
+
+  if (firebaseDocId) {
+    return window.db.collection("inventoryRecords").doc(firebaseDocId);
+  }
+
+  const numberSnapshot = await window.db
+    .collection("inventoryRecords")
+    .where("id", "==", Number(itemId))
+    .limit(1)
+    .get();
+
+  if (!numberSnapshot.empty) {
+    return numberSnapshot.docs[0].ref;
+  }
+
+  const stringSnapshot = await window.db
+    .collection("inventoryRecords")
+    .where("id", "==", String(itemId))
+    .limit(1)
+    .get();
+
+  if (stringSnapshot.empty) {
+    throw new Error("Inventory document not found in Firebase.");
+  }
+
+  return stringSnapshot.docs[0].ref;
+}
+
+async function updateInventoryItemInFirebase(itemOrId, updates) {
+  const docRef = await getInventoryFirebaseDocRef(itemOrId);
+
+  await docRef.update({
+    ...updates,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+async function saveRecentActivityToFirebase(activity) {
+  if (!window.db) return;
+
+  await window.db.collection("recentActivities").add({
+    ...activity,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+async function syncLowStockItemsToFirebase() {
+  if (!window.db) return;
+
+  const lowStockItems = getLocalStorageArray(INVENTORY_STORAGE_KEYS.lowStockItems);
+
+  const snapshot = await window.db.collection("lowStockItems").get();
+  const batch = window.db.batch();
+
+  snapshot.docs.forEach(function (doc) {
+    batch.delete(doc.ref);
+  });
+
+  lowStockItems.forEach(function (item) {
+    const ref = window.db.collection("lowStockItems").doc(String(item.id));
+    batch.set(ref, {
+      ...item,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  });
+
+  await batch.commit();
+}
+
+async function upsertCheckoutItemToFirebase(item) {
+  if (!window.db) {
+    throw new Error("Firestore is not initialized.");
+  }
+
+  const sourceId = String(item.sourceInventoryId || item.id || "");
+
+  if (!sourceId) {
+    throw new Error("Checkout item has no source inventory ID.");
+  }
+
+  const payload = {
+    ...item,
+    id: String(item.id),
+    sourceInventoryId: sourceId,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  const snapshot = await window.db
+    .collection("checkoutItems")
+    .where("sourceInventoryId", "==", sourceId)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    await window.db.collection("checkoutItems").add({
+      ...payload,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    return;
+  }
+
+  await snapshot.docs[0].ref.update(payload);
+}
+
+/* ================= NOTIFICATION ================= */
 function showNotification(message, type = "success") {
   let container = document.getElementById("notificationContainer");
 
@@ -32,6 +333,7 @@ function showNotification(message, type = "success") {
     success: "#1b7f89",
     warning: "#d89b00",
     danger: "#dc3545",
+    error: "#dc3545",
     info: "#0f6d7a"
   };
 
@@ -39,17 +341,16 @@ function showNotification(message, type = "success") {
 
   container.appendChild(notif);
 
-  setTimeout(() => {
+  setTimeout(function () {
     notif.classList.add("hide");
 
-    setTimeout(() => {
+    setTimeout(function () {
       notif.remove();
     }, 250);
   }, 2600);
 }
 
 /* ================= CUSTOM CONFIRM MODAL ================= */
-
 function createInventoryConfirmModal() {
   if (document.getElementById("inventoryConfirmModal")) return;
 
@@ -77,7 +378,7 @@ function createInventoryConfirmModal() {
               </button>
 
               <button type="button" class="btn btn-action" id="inventoryConfirmYesBtn">
-                Remove
+                Archive
               </button>
             </div>
           </div>
@@ -90,7 +391,7 @@ function createInventoryConfirmModal() {
 }
 
 function showInventoryConfirm(message) {
-  return new Promise((resolve) => {
+  return new Promise(function (resolve) {
     createInventoryConfirmModal();
 
     const modalElement = document.getElementById("inventoryConfirmModal");
@@ -103,6 +404,7 @@ function showInventoryConfirm(message) {
     }
 
     messageElement.textContent = message;
+    yesButton.textContent = "Archive";
 
     const modalInstance =
       bootstrap.Modal.getInstance(modalElement) ||
@@ -138,11 +440,28 @@ function showInventoryConfirm(message) {
 }
 
 /* ================= HELPERS ================= */
+function isInventoryArchived(item) {
+  return (
+    item?.archived === true ||
+    item?.isArchived === true ||
+    item?.inventoryArchived === true ||
+    String(item?.status || "").toLowerCase() === "archived"
+  );
+}
 
 function getNextInventoryId() {
-  if (inventoryRecords.length === 0) return 1;
+  const archivedInventoryRecords = getLocalStorageArray(
+    INVENTORY_STORAGE_KEYS.archivedInventoryRecords
+  );
 
-  return inventoryRecords.reduce((max, item) => {
+  const allRecords = [
+    ...inventoryRecords,
+    ...archivedInventoryRecords
+  ];
+
+  if (allRecords.length === 0) return 1;
+
+  return allRecords.reduce(function (max, item) {
     return Math.max(max, parseInt(item.id, 10) || 0);
   }, 0) + 1;
 }
@@ -154,15 +473,25 @@ function getInventoryStatus(quantity) {
 
 function formatInventoryQuantity(quantity) {
   const qty = parseFloat(quantity) || 0;
-  return Math.floor(qty);
+
+  if (Number.isInteger(qty)) {
+    return String(qty);
+  }
+
+  return String(qty.toFixed(2)).replace(/\.?0+$/, "");
+}
+
+function formatInventoryPrice(price) {
+  const amount = parseFloat(price) || 0;
+  return `₱${amount.toFixed(2)}`;
 }
 
 function formatInventoryExpiration(value) {
   if (!value) return "";
 
-  if (value.includes("-")) {
-    const [year, month] = value.split("-");
-    return `${month}/${year.slice(2)}`;
+  if (String(value).includes("-")) {
+    const [year, month] = String(value).split("-");
+    return `${month}/${String(year).slice(2)}`;
   }
 
   return value;
@@ -188,6 +517,32 @@ function escapeHTML(value) {
     .replaceAll("'", "&#039;");
 }
 
+function getOptionalInputValue(ids) {
+  for (const id of ids) {
+    const element = document.getElementById(id);
+
+    if (element) {
+      return element.value;
+    }
+  }
+
+  return "";
+}
+
+function getCleanPrice(value) {
+  if (value === "" || value === null || value === undefined) {
+    return 0;
+  }
+
+  const price = parseFloat(value);
+
+  if (Number.isNaN(price) || price < 0) {
+    return 0;
+  }
+
+  return price;
+}
+
 function syncInventorySelection(id, isSelected) {
   const itemId = String(id || "");
 
@@ -198,7 +553,7 @@ function syncInventorySelection(id, isSelected) {
       selectedInventoryIds.push(itemId);
     }
   } else {
-    selectedInventoryIds = selectedInventoryIds.filter((selectedId) => {
+    selectedInventoryIds = selectedInventoryIds.filter(function (selectedId) {
       return selectedId !== itemId;
     });
   }
@@ -216,52 +571,225 @@ function updateSelectAllInventoryState(allowSelectAllChecked = false) {
     return;
   }
 
-  const checkedBoxes = document.querySelectorAll(".inventory-checkbox:checked");
-
   if (!allowSelectAllChecked) {
     selectAll.checked = false;
     selectAll.indeterminate = false;
     return;
   }
 
+  const checkedBoxes = document.querySelectorAll(".inventory-checkbox:checked");
+
   selectAll.checked = checkedBoxes.length === checkboxes.length;
   selectAll.indeterminate =
     checkedBoxes.length > 0 && checkedBoxes.length < checkboxes.length;
 }
-/* ================= FILTER / SORT ================= */
 
+function clearInventorySelection() {
+  selectedInventoryIds = [];
+
+  document.querySelectorAll(".inventory-checkbox").forEach(function (checkbox) {
+    checkbox.checked = false;
+  });
+
+  document.querySelectorAll("#inventoryTableBody tr").forEach(function (row) {
+    row.classList.remove("selected-record");
+  });
+
+  updateSelectAllInventoryState(false);
+}
+
+function isInventoryItemSellable(item) {
+  const blockedCategories = [
+    "Surgery Supplies",
+    "Clinic Supplies",
+    "Supply"
+  ];
+
+  return !blockedCategories.includes(item.category);
+}
+
+/* ================= ADD SELECTED TO CHECKOUT ================= */
+async function addSelectedItemsToCheckout() {
+  if (selectedInventoryIds.length === 0) {
+    showNotification("Please select item/s to add to checkout.", "warning");
+    return;
+  }
+
+  const selectedItems = inventoryRecords.filter(function (item) {
+    return selectedInventoryIds.includes(String(item.id)) && !isInventoryArchived(item);
+  });
+
+  if (selectedItems.length === 0) {
+    showNotification("Selected item/s were not found.", "warning");
+    return;
+  }
+
+  const blockedItems = selectedItems.filter(function (item) {
+    return !isInventoryItemSellable(item);
+  });
+
+  const outOfStockItems = selectedItems.filter(function (item) {
+    return isInventoryItemSellable(item) && (parseFloat(item.quantity) || 0) <= 0;
+  });
+
+  const sellableItems = selectedItems.filter(function (item) {
+    return isInventoryItemSellable(item) && (parseFloat(item.quantity) || 0) > 0;
+  });
+
+  if (sellableItems.length === 0) {
+    if (blockedItems.length > 0) {
+      showNotification("Selected item/s are clinic-use supplies and cannot be added to checkout.", "warning");
+    } else {
+      showNotification("Selected item/s are out of stock.", "warning");
+    }
+
+    return;
+  }
+
+  const checkoutItems = getLocalStorageArray(INVENTORY_STORAGE_KEYS.checkoutItems);
+
+  const alreadyAddedItems = [];
+  const newlyAddedItems = [];
+  const checkoutItemsToSync = [];
+
+  sellableItems.forEach(function (item) {
+    const existingCheckoutItem = checkoutItems.find(function (checkoutItem) {
+      return String(checkoutItem.sourceInventoryId || checkoutItem.id) === String(item.id);
+    });
+
+    if (existingCheckoutItem) {
+      alreadyAddedItems.push(item);
+
+      existingCheckoutItem.availableQuantity = parseFloat(item.quantity) || 0;
+      existingCheckoutItem.price = parseFloat(item.price) || 0;
+      existingCheckoutItem.unit = item.unit;
+      existingCheckoutItem.expirationDate = item.expirationDate;
+      existingCheckoutItem.updatedAt = new Date().toISOString();
+
+      checkoutItemsToSync.push(existingCheckoutItem);
+      return;
+    }
+
+    const checkoutItem = {
+      id: String(item.id),
+      sourceInventoryId: String(item.id),
+      itemName: item.itemName,
+      itemDescription: item.itemDescription,
+      category: item.category,
+      availableQuantity: parseFloat(item.quantity) || 0,
+      checkoutQuantity: 1,
+      unit: item.unit,
+      price: parseFloat(item.price) || 0,
+      expirationDate: item.expirationDate,
+      addedAt: new Date().toISOString()
+    };
+
+    checkoutItems.push(checkoutItem);
+    checkoutItemsToSync.push(checkoutItem);
+
+    newlyAddedItems.push(item);
+  });
+
+  const activity = {
+    dateTime: new Date().toLocaleString(),
+    module: "Inventory",
+    action: "Added to Checkout",
+    details: `${newlyAddedItems.length} item(s) added to checkout`
+  };
+
+  try {
+    for (const checkoutItem of checkoutItemsToSync) {
+      await upsertCheckoutItemToFirebase(checkoutItem);
+    }
+
+    setLocalStorageArray(INVENTORY_STORAGE_KEYS.checkoutItems, checkoutItems);
+
+    if (newlyAddedItems.length > 0) {
+      await saveRecentActivityToFirebase(activity);
+      saveRecentActivity(activity);
+    }
+
+    if (blockedItems.length > 0) {
+      const blockedNames = blockedItems
+        .map(function (item) {
+          return item.itemName;
+        })
+        .join(", ");
+
+      showNotification(`${blockedNames} cannot be added because they are clinic-use supplies.`, "warning");
+    }
+
+    if (outOfStockItems.length > 0) {
+      const outOfStockNames = outOfStockItems
+        .map(function (item) {
+          return item.itemName;
+        })
+        .join(", ");
+
+      showNotification(`${outOfStockNames} cannot be added because they are out of stock.`, "warning");
+    }
+
+    clearInventorySelection();
+    renderInventoryRecords();
+
+    if (newlyAddedItems.length > 0) {
+      if (alreadyAddedItems.length > 0) {
+        showNotification("New item/s added. Some selected item/s were already in checkout.", "info");
+      } else {
+        showNotification("Selected item/s added to checkout.", "success");
+      }
+
+      return;
+    }
+
+    if (alreadyAddedItems.length > 0) {
+      showNotification("Selected item/s are already added to checkout.", "info");
+      return;
+    }
+  } catch (error) {
+    console.error("Firebase checkout sync error:", error);
+    showNotification("Failed to add selected item/s to checkout in Firebase.", "error");
+  }
+}
+
+/* ================= FILTER / SORT ================= */
 function getFilteredInventory() {
-  let data = [...inventoryRecords];
+  let data = inventoryRecords.filter(function (item) {
+    return !isInventoryArchived(item);
+  });
 
   if (inventoryCurrentFilter !== "all") {
-    data = data.filter((item) => item.category === inventoryCurrentFilter);
+    data = data.filter(function (item) {
+      return item.category === inventoryCurrentFilter;
+    });
   }
 
   const searchValue =
     document.getElementById("inventorySearch")?.value.toLowerCase() || "";
 
   if (searchValue) {
-    data = data.filter((item) => {
+    data = data.filter(function (item) {
       return (
-        (item.itemName || "").toLowerCase().includes(searchValue) ||
-        (item.itemDescription || "").toLowerCase().includes(searchValue) ||
-        (item.category || "").toLowerCase().includes(searchValue) ||
-        (item.status || "").toLowerCase().includes(searchValue)
+        String(item.itemName || "").toLowerCase().includes(searchValue) ||
+        String(item.itemDescription || "").toLowerCase().includes(searchValue) ||
+        String(item.category || "").toLowerCase().includes(searchValue) ||
+        String(item.status || "").toLowerCase().includes(searchValue) ||
+        String(item.price || "").toLowerCase().includes(searchValue)
       );
     });
   }
 
   if (inventoryCurrentSort === "quantity") {
-    data.sort((a, b) => {
+    data.sort(function (a, b) {
       const result = Number(a.quantity) - Number(b.quantity);
       return inventorySortDirection === "asc" ? result : -result;
     });
   }
 
   if (inventoryCurrentSort === "expiration") {
-    data.sort((a, b) => {
-      const result = (a.expirationDate || "").localeCompare(
-        b.expirationDate || ""
+    data.sort(function (a, b) {
+      const result = String(a.expirationDate || "").localeCompare(
+        String(b.expirationDate || "")
       );
 
       return inventorySortDirection === "asc" ? result : -result;
@@ -274,7 +802,7 @@ function getFilteredInventory() {
       "In Stock": 2
     };
 
-    data.sort((a, b) => {
+    data.sort(function (a, b) {
       const result = (order[a.status] || 99) - (order[b.status] || 99);
       return inventorySortDirection === "asc" ? result : -result;
     });
@@ -284,30 +812,31 @@ function getFilteredInventory() {
 }
 
 /* ================= RENDER ================= */
-
 function renderInventoryRecords() {
   const tableBody = document.getElementById("inventoryTableBody");
   if (!tableBody) return;
 
   const displayInventory = getFilteredInventory();
+  const showSelection = shouldShowSelectionColumn();
+  const showAction = shouldShowActionColumn();
 
   tableBody.innerHTML = "";
 
   if (displayInventory.length === 0) {
     tableBody.innerHTML = `
       <tr id="emptyInventoryRow">
-        <td colspan="8" class="text-center text-muted py-5">
+        <td colspan="${getInventoryTableColspan()}" class="text-center text-muted py-5">
           No inventory records found.
         </td>
       </tr>
     `;
 
-updateSelectAllInventoryState(true);
+    updateSelectAllInventoryState(false);
     return;
   }
 
-  displayInventory.forEach((item) => {
-    const originalIndex = inventoryRecords.findIndex((record) => {
+  displayInventory.forEach(function (item) {
+    const originalIndex = inventoryRecords.findIndex(function (record) {
       return String(record.id) === String(item.id);
     });
 
@@ -317,24 +846,45 @@ updateSelectAllInventoryState(true);
     const row = document.createElement("tr");
     row.dataset.inventoryRowId = itemId;
 
-    if (isSelected) {
+    if (isSelected && showSelection) {
       row.classList.add("selected-record");
     }
 
+    const checkboxCell = showSelection
+      ? `
+        <td class="checkbox-col">
+          <input 
+            type="checkbox" 
+            class="inventory-checkbox" 
+            data-id="${escapeHTML(item.id)}"
+            ${isSelected ? "checked" : ""}
+          >
+        </td>
+      `
+      : "";
+
+    const actionCell = showAction
+      ? `
+        <td>
+          <button 
+            type="button" 
+            class="btn btn-sm btn-primary edit-inventory-btn" 
+            data-index="${originalIndex}"
+          >
+            Edit
+          </button>
+        </td>
+      `
+      : "";
+
     row.innerHTML = `
-      <td class="checkbox-col">
-        <input 
-          type="checkbox" 
-          class="inventory-checkbox" 
-          data-id="${escapeHTML(item.id)}"
-          ${isSelected ? "checked" : ""}
-        >
-      </td>
+      ${checkboxCell}
 
       <td>${escapeHTML(item.id)}</td>
       <td>${escapeHTML(item.itemName)}</td>
       <td>${escapeHTML(item.category)}</td>
       <td>${escapeHTML(formatInventoryQuantity(item.quantity))} ${escapeHTML(item.unit)}</td>
+      <td>${escapeHTML(formatInventoryPrice(item.price))}</td>
       <td>${escapeHTML(formatInventoryExpiration(item.expirationDate))}</td>
 
       <td>
@@ -345,26 +895,17 @@ updateSelectAllInventoryState(true);
         </span>
       </td>
 
-      <td>
-        <button 
-          type="button" 
-          class="btn btn-sm btn-primary edit-inventory-btn" 
-          data-index="${originalIndex}"
-        >
-          Edit
-        </button>
-      </td>
+      ${actionCell}
     `;
 
     tableBody.appendChild(row);
   });
 
-  updateSelectAllInventoryState();
+  updateSelectAllInventoryState(false);
 }
 
 /* ================= ADD ================= */
-
-function addInventoryItem(event) {
+async function addInventoryItem(event) {
   event.preventDefault();
 
   const itemName = document.getElementById("itemName")?.value.trim();
@@ -375,6 +916,15 @@ function addInventoryItem(event) {
   const quantity = document.getElementById("quantity")?.value;
   const unit = document.getElementById("unit")?.value;
   const expirationDate = document.getElementById("expirationDate")?.value;
+
+  const priceValue = getOptionalInputValue([
+    "price",
+    "sellingPrice",
+    "unitPrice",
+    "itemPrice"
+  ]);
+
+  const price = getCleanPrice(priceValue);
 
   if (
     !itemName ||
@@ -396,22 +946,51 @@ function addInventoryItem(event) {
     quantity,
     unit,
     expirationDate,
-    status: getInventoryStatus(quantity)
+    price,
+    status: getInventoryStatus(quantity),
+    archived: false,
+    isArchived: false,
+    inventoryArchived: false,
+    createdAt: new Date().toISOString()
   };
 
-  inventoryRecords.push(newItem);
+  const activity = {
+    dateTime: new Date().toLocaleString(),
+    module: "Inventory",
+    action: "Added Item",
+    details: `${newItem.itemName} added to inventory`
+  };
 
-  document.getElementById("addInventoryForm")?.reset();
-  closeBootstrapModal("addInventoryModal");
+  try {
+    newItem.firebaseDocId = await addInventoryItemToFirebase(newItem);
+    await saveRecentActivityToFirebase(activity);
 
-  renderInventoryRecords();
+    inventoryRecords.push(newItem);
 
-  showNotification("Item added successfully!", "success");
+    saveInventoryLocalStorage();
+    await syncLowStockItemsToFirebase();
+
+    saveRecentActivity(activity);
+
+    document.getElementById("addInventoryForm")?.reset();
+    closeBootstrapModal("addInventoryModal");
+
+    renderInventoryRecords();
+
+    showNotification("Item added successfully!", "success");
+  } catch (error) {
+    console.error("Firebase add inventory error:", error);
+    showNotification("Failed to add item to Firebase.", "error");
+  }
 }
 
-/* ================= EDIT ================= */
-
+/* ================= EDIT - ADMIN ONLY ================= */
 function openEditInventoryModal(index) {
+  if (isStaffInventoryPage()) {
+    showNotification("Staff accounts cannot edit inventory items.", "warning");
+    return;
+  }
+
   const item = inventoryRecords[index];
   if (!item) return;
 
@@ -427,15 +1006,37 @@ function openEditInventoryModal(index) {
   document.getElementById("editInventoryExpirationDate").value =
     item.expirationDate || "";
 
-  const modal = new bootstrap.Modal(
-    document.getElementById("editInventoryModal")
-  );
+  const editPriceInput =
+    document.getElementById("editInventoryPrice") ||
+    document.getElementById("editPrice") ||
+    document.getElementById("editSellingPrice") ||
+    document.getElementById("editUnitPrice") ||
+    document.getElementById("editItemPrice");
 
+  if (editPriceInput) {
+    editPriceInput.value =
+      item.price ||
+      item.sellingPrice ||
+      item.unitPrice ||
+      item.itemPrice ||
+      "";
+  }
+
+  const modalElement = document.getElementById("editInventoryModal");
+
+  if (!modalElement) return;
+
+  const modal = new bootstrap.Modal(modalElement);
   modal.show();
 }
 
-function updateInventoryItem(event) {
+async function updateInventoryItem(event) {
   event.preventDefault();
+
+  if (isStaffInventoryPage()) {
+    showNotification("Staff accounts cannot edit inventory items.", "warning");
+    return;
+  }
 
   if (
     editingInventoryIndex === null ||
@@ -443,6 +1044,8 @@ function updateInventoryItem(event) {
   ) {
     return;
   }
+
+  const oldItem = inventoryRecords[editingInventoryIndex];
 
   const itemName = document
     .getElementById("editInventoryItemName")
@@ -457,6 +1060,16 @@ function updateInventoryItem(event) {
     "editInventoryExpirationDate"
   )?.value;
 
+  const priceValue = getOptionalInputValue([
+    "editInventoryPrice",
+    "editPrice",
+    "editSellingPrice",
+    "editUnitPrice",
+    "editItemPrice"
+  ]);
+
+  const price = getCleanPrice(priceValue);
+
   if (
     !itemName ||
     !itemDescription ||
@@ -469,38 +1082,82 @@ function updateInventoryItem(event) {
     return;
   }
 
-  inventoryRecords[editingInventoryIndex] = {
-    ...inventoryRecords[editingInventoryIndex],
+  const updatedItem = {
+    ...oldItem,
     itemName,
     itemDescription,
     category,
     quantity,
     unit,
     expirationDate,
-    status: getInventoryStatus(quantity)
+    price,
+    status: getInventoryStatus(quantity),
+    archived: false,
+    isArchived: false,
+    inventoryArchived: false,
+    updatedAt: new Date().toISOString()
   };
 
-  closeBootstrapModal("editInventoryModal");
+  const activity = {
+    dateTime: new Date().toLocaleString(),
+    module: "Inventory",
+    action: "Updated Item",
+    details: `${itemName} inventory record updated`
+  };
 
-  editingInventoryIndex = null;
+  try {
+    await updateInventoryItemInFirebase(oldItem, {
+      itemName,
+      itemDescription,
+      category,
+      quantity,
+      unit,
+      expirationDate,
+      price,
+      status: getInventoryStatus(quantity),
+      archived: false,
+      isArchived: false,
+      inventoryArchived: false
+    });
 
-  renderInventoryRecords();
+    await saveRecentActivityToFirebase(activity);
 
-  showNotification("Item updated successfully!", "success");
+    inventoryRecords[editingInventoryIndex] = updatedItem;
+
+    saveInventoryLocalStorage();
+    await syncLowStockItemsToFirebase();
+
+    saveRecentActivity(activity);
+
+    closeBootstrapModal("editInventoryModal");
+
+    editingInventoryIndex = null;
+
+    renderInventoryRecords();
+
+    showNotification("Item updated successfully!", "success");
+  } catch (error) {
+    console.error("Firebase update inventory error:", error);
+    showNotification("Failed to update item in Firebase.", "error");
+  }
 }
 
-/* ================= REMOVE ================= */
+/* ================= ARCHIVE - ADMIN ONLY ================= */
+async function archiveSelectedInventoryItems() {
+  if (isStaffInventoryPage()) {
+    showNotification("Staff accounts cannot archive inventory items.", "warning");
+    return;
+  }
 
-async function removeSelectedInventoryItems() {
   const checkedBoxes = document.querySelectorAll(".inventory-checkbox:checked");
 
   if (checkedBoxes.length === 0 && selectedInventoryIds.length === 0) {
-    showNotification("Please select item/s to remove.", "warning");
+    showNotification("Please select item/s to archive.", "warning");
     return;
   }
 
   const confirmed = await showInventoryConfirm(
-    "Remove selected inventory item/s?"
+    "Archive selected inventory item/s?"
   );
 
   if (!confirmed) return;
@@ -508,34 +1165,113 @@ async function removeSelectedInventoryItems() {
   const selectedIds =
     selectedInventoryIds.length > 0
       ? [...selectedInventoryIds]
-      : Array.from(checkedBoxes).map((checkbox) => String(checkbox.dataset.id));
+      : Array.from(checkedBoxes).map(function (checkbox) {
+          return String(checkbox.dataset.id);
+        });
 
-  inventoryRecords = inventoryRecords.filter((item) => {
-    return !selectedIds.includes(String(item.id));
-  });
+  const now = new Date().toISOString();
 
-  selectedInventoryIds = [];
+  const currentArchivedInventory = getLocalStorageArray(
+    INVENTORY_STORAGE_KEYS.archivedInventoryRecords
+  );
 
-  const selectAll = document.getElementById("selectAllInventory");
+  const itemsToArchive = inventoryRecords
+    .filter(function (item) {
+      return selectedIds.includes(String(item.id));
+    })
+    .map(function (item) {
+      return {
+        ...item,
+        archived: true,
+        isArchived: true,
+        inventoryArchived: true,
+        status: "Archived",
+        archivedDate: now,
+        dateArchived: now,
+        archivedAt: now
+      };
+    });
 
-  if (selectAll) {
-    selectAll.checked = false;
-    selectAll.indeterminate = false;
+  if (itemsToArchive.length === 0) {
+    showNotification("Selected item/s were not found.", "warning");
+    return;
   }
 
-  renderInventoryRecords();
+  const activity = {
+    dateTime: new Date().toLocaleString(),
+    module: "Inventory",
+    action: "Archived Item",
+    details: `${selectedIds.length} inventory item(s) archived`
+  };
 
-  showNotification("Selected item/s removed.", "success");
+  try {
+    for (const item of itemsToArchive) {
+      await updateInventoryItemInFirebase(item, {
+        archived: true,
+        isArchived: true,
+        inventoryArchived: true,
+        status: "Archived",
+        archivedDate: now,
+        dateArchived: now,
+        archivedAt: now
+      });
+    }
+
+    await saveRecentActivityToFirebase(activity);
+
+    const archivedIds = itemsToArchive.map(function (item) {
+      return String(item.id);
+    });
+
+    const archivedWithoutDuplicates = currentArchivedInventory.filter(function (item) {
+      return !archivedIds.includes(String(item.id));
+    });
+
+    inventoryRecords = inventoryRecords.filter(function (item) {
+      return !selectedIds.includes(String(item.id));
+    });
+
+    setLocalStorageArray(
+      INVENTORY_STORAGE_KEYS.archivedInventoryRecords,
+      [...itemsToArchive, ...archivedWithoutDuplicates]
+    );
+
+    selectedInventoryIds = [];
+
+    const selectAll = document.getElementById("selectAllInventory");
+
+    if (selectAll) {
+      selectAll.checked = false;
+      selectAll.indeterminate = false;
+    }
+
+    saveInventoryLocalStorage();
+    await syncLowStockItemsToFirebase();
+
+    saveRecentActivity(activity);
+
+    renderInventoryRecords();
+
+    showNotification("Selected item/s archived successfully.", "success");
+  } catch (error) {
+    console.error("Firebase archive inventory error:", error);
+    showNotification("Failed to archive item/s in Firebase.", "error");
+  }
+}
+
+function removeSelectedInventoryItems() {
+  archiveSelectedInventoryItems();
 }
 
 /* ================= EVENTS ================= */
-
 function initializeInventoryEvents() {
   const addInventoryForm = document.getElementById("addInventoryForm");
   const editInventoryForm = document.getElementById("editInventoryForm");
   const removeInventoryBtn = document.getElementById("removeInventoryBtn");
+  const archiveInventoryBtn = document.getElementById("archiveInventoryBtn");
   const inventorySearch = document.getElementById("inventorySearch");
   const selectAllInventory = document.getElementById("selectAllInventory");
+  const addSelectedToCheckoutBtn = document.getElementById("addSelectedToCheckoutBtn");
 
   if (addInventoryForm) {
     addInventoryForm.addEventListener("submit", addInventoryItem);
@@ -546,34 +1282,42 @@ function initializeInventoryEvents() {
   }
 
   if (removeInventoryBtn) {
-    removeInventoryBtn.addEventListener("click", removeSelectedInventoryItems);
+    removeInventoryBtn.addEventListener("click", archiveSelectedInventoryItems);
+  }
+
+  if (archiveInventoryBtn) {
+    archiveInventoryBtn.addEventListener("click", archiveSelectedInventoryItems);
   }
 
   if (inventorySearch) {
     inventorySearch.addEventListener("input", renderInventoryRecords);
   }
 
-if (selectAllInventory) {
-  selectAllInventory.addEventListener("change", function () {
-    document.querySelectorAll(".inventory-checkbox").forEach((checkbox) => {
-      checkbox.checked = selectAllInventory.checked;
+  if (addSelectedToCheckoutBtn) {
+    addSelectedToCheckoutBtn.addEventListener("click", addSelectedItemsToCheckout);
+  }
 
-      syncInventorySelection(checkbox.dataset.id, checkbox.checked);
+  if (selectAllInventory) {
+    selectAllInventory.addEventListener("change", function () {
+      document.querySelectorAll(".inventory-checkbox").forEach(function (checkbox) {
+        checkbox.checked = selectAllInventory.checked;
 
-      const row = checkbox.closest("tr");
+        syncInventorySelection(checkbox.dataset.id, checkbox.checked);
 
-      if (row) {
-        row.classList.toggle("selected-record", checkbox.checked);
-      }
+        const row = checkbox.closest("tr");
+
+        if (row) {
+          row.classList.toggle("selected-record", checkbox.checked);
+        }
+      });
+
+      updateSelectAllInventoryState(true);
     });
+  }
 
-    updateSelectAllInventoryState(true);
-  });
-}
-
-  document.querySelectorAll(".inventory-filter-btn").forEach((button) => {
+  document.querySelectorAll(".inventory-filter-btn").forEach(function (button) {
     button.addEventListener("click", function () {
-      document.querySelectorAll(".inventory-filter-btn").forEach((btn) => {
+      document.querySelectorAll(".inventory-filter-btn").forEach(function (btn) {
         btn.classList.remove("active");
       });
 
@@ -584,7 +1328,7 @@ if (selectAllInventory) {
     });
   });
 
-  document.querySelectorAll(".sortable-th").forEach((header) => {
+  document.querySelectorAll(".sortable-th").forEach(function (header) {
     header.addEventListener("click", function () {
       const sortKey = header.dataset.sort;
 
@@ -596,7 +1340,7 @@ if (selectAllInventory) {
         inventorySortDirection = "asc";
       }
 
-      document.querySelectorAll(".sortable-th").forEach((th) => {
+      document.querySelectorAll(".sortable-th").forEach(function (th) {
         th.classList.remove("active");
       });
 
@@ -628,10 +1372,12 @@ if (selectAllInventory) {
       row.classList.toggle("selected-record", checkbox.checked);
     }
 
-    updateSelectAllInventoryState();
+    updateSelectAllInventoryState(false);
   });
 
   document.addEventListener("click", function (event) {
+    if (!shouldShowSelectionColumn()) return;
+
     const row = event.target.closest(
       "#inventoryTableBody tr[data-inventory-row-id]"
     );
@@ -654,6 +1400,6 @@ if (selectAllInventory) {
 
     row.classList.toggle("selected-record", checkbox.checked);
 
-    updateSelectAllInventoryState();
+    updateSelectAllInventoryState(false);
   });
 }

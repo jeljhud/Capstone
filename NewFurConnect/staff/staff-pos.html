@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FurConnect | POS / Stock Out</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <section id="mainSystem">
+    <div class="container-fluid p-0 overflow-hidden">
+
+      <nav class="sidebar">
+        <div class="sidebar-inner">
+          <div class="text-center mb-5 brand-wrap">
+            <img src="../pics/paw2.png" alt="paw" class="sidebar-logo mb-2">
+            <h2 class="fw-bold">FurConnect</h2>
+          </div>
+
+          <a href="staff-dashboard.html" id="btn-dashboard" class="btn btn-light nav-btn-custom">Dashboard</a>
+
+          <div class="appointment-nav-dropdown" id="appointmentDropdown">
+            <button id="btn-appointment" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
+              <span>Appointment</span>
+              <span class="nav-arrow">⌄</span>
+            </button>
+
+            <div class="appointment-dropdown-menu">
+              <a href="staff-registration.html" class="dropdown-link-btn">Registration</a>
+              <a href="staff-appointments.html" class="dropdown-link-btn">Appointments</a>
+              <a href="staff-appointment-logs.html" class="dropdown-link-btn">Appointment Logs</a>
+            </div>
+          </div>
+
+          <div class="appointment-nav-dropdown" id="recordsDropdown">
+            <button id="btn-records" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
+              <span>Patient Records</span>
+              <span class="nav-arrow">⌄</span>
+            </button>
+
+            <div class="appointment-dropdown-menu">
+              <a href="staff-records.html" class="dropdown-link-btn">Pet Records</a>
+              <a href="staff-archived-records.html" class="dropdown-link-btn">Archived Pet Records</a>
+            </div>
+          </div>
+
+          <div class="appointment-nav-dropdown open" id="inventoryDropdown">
+            <button id="btn-inventory" class="btn btn-light nav-btn-custom appointment-main-btn active-nav" type="button">
+              <span>Inventory</span>
+              <span class="nav-arrow">⌄</span>
+            </button>
+
+            <div class="appointment-dropdown-menu">
+              <a href="staff-inventory.html" class="dropdown-link-btn">Inventory Items</a>
+              <a href="staff-pos.html" class="dropdown-link-btn active">Item Checkout</a>
+              <a href="staff-sales-history.html" class="dropdown-link-btn">Sales History</a>
+            </div>
+          </div>
+
+          <div class="logout-wrap">
+            <a href="../html/login.html?logout=1" id="logoutBtn" class="btn btn-light nav-btn-custom">Logout</a>
+          </div>
+        </div>
+      </nav>
+
+      <main class="page-area" id="posPage">
+        <div class="page-title-wrap pos-header">
+          <div>
+            <h1>Item Checkout</h1>
+            <p>Manage item sales transactions</p>
+          </div>
+
+          <div class="pos-header-tools">
+            <input type="text" id="posSearchInput" class="search-box" placeholder="Search item...">
+
+            <div class="pos-category-wrap">
+              <label for="posCategoryFilter" class="pos-filter-label">Category</label>
+
+              <select id="posCategoryFilter" class="form-select pos-category-filter">
+                <option value="all">All Categories</option>
+                <option value="retail products">Retail Products</option>
+                <option value="medicine">Medicine</option>
+                <option value="deworming medicine">Deworming Medicine</option>
+                <option value="vaccine">Vaccine</option>
+                <option value="grooming supplies">Grooming Supplies</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="pos-layout">
+          <section class="inventory-panel pos-items-panel">
+            <div class="pos-section-head">
+              <div>
+                <h2>Available Items</h2>
+                <p>Only items added from Inventory will appear here</p>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <div class="table-responsive">
+                <table class="table custom-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Item Name</th>
+                      <th>Category</th>
+                      <th>Stock</th>
+                      <th>Price</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+
+                  <tbody id="posItemsTableBody">
+                    <tr>
+                      <td colspan="6" class="text-center text-muted py-4">
+                        No items selected for checkout. Please add items from Inventory first.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <aside class="inventory-panel pos-cart-panel">
+            <div class="pos-section-head">
+              <div>
+                <h2>Cart</h2>
+                <p>Review selected items</p>
+              </div>
+            </div>
+
+            <div class="pos-cart-list" id="posCartList">
+              <div class="pos-empty-cart">
+                No items added yet.
+              </div>
+            </div>
+
+            <div class="pos-payment-box">
+              <div class="pos-total-row">
+                <span>Subtotal</span>
+                <strong id="posSubtotal">₱0.00</strong>
+              </div>
+
+              <div class="pos-total-row">
+                <span>Total</span>
+                <strong id="posGrandTotal" class="pos-grand-total">₱0.00</strong>
+              </div>
+
+              <label for="paymentMethod">Payment Method</label>
+              <select id="paymentMethod" class="form-select">
+                <option value="cash">Cash</option>
+                <option value="gcash">GCash</option>
+              </select>
+
+              <label for="amountPaid">Amount Paid</label>
+              <input type="number" id="amountPaid" class="form-control" placeholder="Enter amount paid">
+
+              <div class="pos-total-row change-row">
+                <span>Change</span>
+                <strong id="posChange">₱0.00</strong>
+              </div>
+
+              <button id="cancelCheckoutBtn" class="btn pos-cancel-checkout-btn" type="button">
+                Cancel Checkout
+              </button>
+
+              <button id="checkoutBtn" class="btn btn-primary-custom pos-checkout-btn" type="button">
+                Checkout
+              </button>
+            </div>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <div id="posReceiptModal" class="qr-modal hidden">
+    <div class="pos-receipt-modal">
+      <button type="button" class="modal-close-x" id="closePosReceiptModal">×</button>
+
+      <div class="pos-receipt-header">
+        <h3>Transaction Receipt</h3>
+        <p>Item checkout completed successfully</p>
+      </div>
+
+      <div class="pos-receipt-info">
+        <div>
+          <span>Transaction ID</span>
+          <strong id="receiptSaleId">-</strong>
+        </div>
+
+        <div>
+          <span>Date & Time</span>
+          <strong id="receiptDateTime">-</strong>
+        </div>
+
+        <div>
+          <span>Payment</span>
+          <strong id="receiptPaymentMethod">-</strong>
+        </div>
+
+        <div>
+          <span>Staff</span>
+          <strong id="receiptStaff">-</strong>
+        </div>
+      </div>
+
+      <div class="pos-receipt-items" id="receiptItemsList"></div>
+
+      <div class="pos-receipt-total">
+        <div>
+          <span>Total</span>
+          <strong id="receiptTotal">₱0.00</strong>
+        </div>
+
+        <div>
+          <span>Amount Paid</span>
+          <strong id="receiptAmountPaid">₱0.00</strong>
+        </div>
+
+        <div>
+          <span>Change</span>
+          <strong id="receiptChange">₱0.00</strong>
+        </div>
+      </div>
+
+      <div class="pos-receipt-actions">
+        <button type="button" class="btn btn-outline-custom" id="printReceiptBtn">
+          Print
+        </button>
+
+        <button type="button" class="btn btn-primary-custom" id="doneReceiptBtn">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="notificationContainer" class="notif-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/navigation.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+
+<script src="../js/firebase-config.js"></script>
+  <script src="../js/pos.js"></script>
+  <script src="../js/auth.js"></script>
+</body>
+</html>
