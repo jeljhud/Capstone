@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 });
 
 let patientRecords = [];
+let archivedAppointments = [];
 let selectedSlots = [];
 let selectedPatient = null;
 let currentCalendarDate = new Date();
@@ -15,7 +16,8 @@ let currentCalendarDate = new Date();
 /* ================= LOCAL STORAGE ================= */
 const APPOINTMENT_STORAGE_KEYS = {
   patientRecords: "patientRecords",
-  recentActivities: "recentActivities"
+  recentActivities: "recentActivities",
+  archivedAppointments: "archivedAppointments"
 };
 
 function getLocalStorageArray(key) {
@@ -109,6 +111,10 @@ function loadPatientRecords() {
       return !isPatientArchived(record);
     })
   );
+
+  archivedAppointments = getLocalStorageArray(
+    APPOINTMENT_STORAGE_KEYS.archivedAppointments
+  );
 }
 
 async function syncPatientRecordsFromFirebaseToLocalStorage() {
@@ -129,7 +135,8 @@ async function syncPatientRecordsFromFirebaseToLocalStorage() {
         createdAt: normalizeFirebaseDate(data.createdAt),
         updatedAt: normalizeFirebaseDate(data.updatedAt),
         appointmentCreatedAt: normalizeFirebaseDate(data.appointmentCreatedAt),
-        appointmentUpdatedAt: normalizeFirebaseDate(data.appointmentUpdatedAt)
+        appointmentUpdatedAt: normalizeFirebaseDate(data.appointmentUpdatedAt),
+        appointmentLoggedAt: normalizeFirebaseDate(data.appointmentLoggedAt)
       };
     });
 
@@ -142,7 +149,28 @@ async function syncPatientRecordsFromFirebaseToLocalStorage() {
       sortPatientRecordsLifo(activeRecords)
     );
 
+    const logsSnapshot = await window.db.collection("archivedAppointments").get();
+
+    const firebaseLogs = logsSnapshot.docs.map(function (doc) {
+      const data = doc.data();
+
+      return {
+        firebaseDocId: doc.id,
+        ...data,
+        createdAt: normalizeFirebaseDate(data.createdAt),
+        archivedAt: normalizeFirebaseDate(data.archivedAt),
+        appointmentArchivedAt: normalizeFirebaseDate(data.appointmentArchivedAt),
+        loggedAt: normalizeFirebaseDate(data.loggedAt)
+      };
+    });
+
+    setLocalStorageArray(
+      APPOINTMENT_STORAGE_KEYS.archivedAppointments,
+      firebaseLogs
+    );
+
     console.log("Firebase appointment patients loaded:", activeRecords.length);
+    console.log("Firebase appointment logs loaded:", firebaseLogs.length);
   } catch (error) {
     console.error("Firebase appointment patient load error:", error);
     showNotification("Failed to load Firebase patients.", "warning");
@@ -289,7 +317,7 @@ function getServiceDurationSlots(serviceType) {
   /*
     1 slot = 30 minutes
 
-    Grooming = 4 slots = 2 hours
+    Grooming = 3 slots = 1 hr and 30 mins
     Checkup = 1 slot = 30 minutes
     Deworming = 1 slot = 30 minutes
     Vaccination = 1 slot = 30 minutes
@@ -501,14 +529,45 @@ function hasAnyAvailableStartSlot(date, serviceType, ignoredPatientId = "") {
 }
 
 /* ================= PATIENT SELECT ================= */
+function isPatientAlreadyInAppointmentLogs(record) {
+  const patientId = String(record?.id || record?.patientId || "").trim();
+
+  if (!patientId) return false;
+
+  return archivedAppointments.some(function (log) {
+    const logPatientId = String(log?.id || log?.patientId || "").trim();
+
+    return logPatientId === patientId;
+  });
+}
+
 function hasExistingAppointment(record) {
   const appointmentDate = String(record?.appointmentDate || "").trim();
   const appointmentTime = String(record?.appointmentTime || "").trim();
   const appointmentType = String(record?.appointmentType || "").trim();
 
+  const lastAppointmentDate = String(record?.lastAppointmentDate || "").trim();
+  const lastAppointmentTime = String(record?.lastAppointmentTime || "").trim();
+  const lastAppointmentType = String(record?.lastAppointmentType || "").trim();
+
   const status = String(record?.appointmentStatus || record?.status || "")
     .trim()
     .toLowerCase();
+
+  const hasCurrentAppointment = Boolean(
+    appointmentDate ||
+    appointmentTime ||
+    appointmentType
+  );
+
+  const hasLoggedAppointment = Boolean(
+    record?.appointmentLogged === true ||
+    record?.appointmentLoggedAt ||
+    lastAppointmentDate ||
+    lastAppointmentTime ||
+    lastAppointmentType ||
+    isPatientAlreadyInAppointmentLogs(record)
+  );
 
   const reusableStatuses = [
     "cancelled",
@@ -518,11 +577,11 @@ function hasExistingAppointment(record) {
     "no appointment"
   ];
 
-  if (reusableStatuses.includes(status)) {
+  if (reusableStatuses.includes(status) && !hasLoggedAppointment) {
     return false;
   }
 
-  return Boolean(appointmentDate || appointmentTime || appointmentType);
+  return hasCurrentAppointment || hasLoggedAppointment;
 }
 
 function renderPatientIdList() {

@@ -12014,3 +12014,414 @@ body.nav-ready .sidebar .sidebar-inner {
 #patientAccountView .hidden {
   display: none !important;
 }
+
+/* SELLING PRICE - PESO SYMBOL INSIDE INPUT */
+.price-field-wrap {
+  position: relative !important;
+  width: 100% !important;
+}
+
+.price-field-wrap .price-symbol {
+  position: absolute !important;
+  left: 16px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 2 !important;
+  color: #1f2933 !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  pointer-events: none !important;
+}
+
+.price-field-wrap .price-field {
+  width: 100% !important;
+  min-height: 56px !important;
+  padding-left: 42px !important;
+  border: 1px solid #111 !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.price-field-wrap .price-field:focus {
+  border-color: #0f6d7a !important;
+  box-shadow: 0 0 0 5px rgba(15, 109, 122, 0.13) !important;
+}
+
+/* FINAL FIX - Selling Price peso symbol inside input */
+.selling-price-wrap {
+  position: relative !important;
+  width: 100% !important;
+}
+
+.selling-price-wrap::before {
+  content: "₱";
+  position: absolute !important;
+  left: 16px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 5 !important;
+  color: #1f2933 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  pointer-events: none !important;
+}
+
+.selling-price-wrap .selling-price-input,
+.selling-price-wrap input#price {
+  width: 100% !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  padding-left: 42px !important;
+  padding-right: 14px !important;
+  background: #ffffff !important;
+  border: 1.5px solid #111 !important;
+  border-radius: 18px !important;
+  color: #1f2933 !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+.selling-price-wrap .selling-price-input:focus,
+.selling-price-wrap input#price:focus {
+  border-color: #111 !important;
+  box-shadow: 0 0 0 4px rgba(15, 109, 122, 0.12) !important;
+}
+
+/* =========================================================
+   MASTER RESPONSIVE FIX
+   Paste at the VERY BOTTOM of styles.css
+========================================================= */
+
+@media (max-width: 992px) {
+  :root {
+    --sidebar-width: 100%;
+  }
+
+  html,
+  body {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .sidebar {
+    position: relative !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    padding: 16px !important;
+    box-shadow: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(15, 109, 122, 0.12) !important;
+  }
+
+  .sidebar-inner {
+    height: auto !important;
+  }
+
+  .page-area {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    padding: 24px 16px !important;
+  }
+
+  .page-title-wrap h1,
+  .dashboard-header-left h1,
+  .display-5 {
+    font-size: 2.2rem !important;
+    letter-spacing: -0.04em !important;
+  }
+
+  .dashboard-header,
+  .inventory-header,
+  .archived-inventory-header,
+  .pos-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 16px !important;
+  }
+
+  .top-tools,
+  .records-tools,
+  .inventory-tools,
+  .archived-inventory-tools,
+  .pos-header-tools {
+    width: 100% !important;
+    margin-top: 0 !important;
+    margin-right: 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .search-box,
+  .inventory-tools .search-box,
+  .archived-inventory-tools .search-box,
+  .pos-header-tools .search-box {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: unset !important;
+  }
+
+  .dashboard-datetime-box {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .dashboard-datetime-value {
+    white-space: normal !important;
+    font-size: 16px !important;
+  }
+
+  .register-three-layout,
+  .appointment-details-grid,
+  .info-grid-card,
+  .payroll-summary-grid,
+  .sales-summary-grid,
+  .sales-filter-grid,
+  .pos-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  [class*="col-"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+
+  .table-responsive,
+  .table-wrap {
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+
+  .custom-table,
+  .dashboard-table,
+  #dashboardPage .table,
+  #archivedInventoryPage .custom-table,
+  #posPage .custom-table,
+  #salesHistoryPage .custom-table {
+    min-width: 680px !important;
+  }
+
+  #archivedInventoryPage,
+  #posPage,
+  #salesHistoryPage {
+    padding: 24px 16px !important;
+  }
+
+  .btn,
+  .btn-action,
+  .btn-add-custom,
+  .btn-primary-custom,
+  .btn-success-custom,
+  .btn-danger-custom {
+    width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .page-area {
+    padding: 18px 12px !important;
+  }
+
+  .card,
+  .records-panel,
+  .inventory-panel,
+  .employees-panel,
+  .register-panel,
+  .dashboard-soft-card {
+    border-radius: 20px !important;
+  }
+
+  .register-section-card,
+  .appointment-calendar-card,
+  .appointment-slot-card {
+    padding: 16px !important;
+    border-radius: 18px !important;
+  }
+
+  .appointment-time-slots,
+  .calendar-slots {
+    grid-template-columns: 1fr !important;
+  }
+
+  .calendar-weekdays,
+  .appointment-calendar-days {
+    gap: 4px !important;
+  }
+
+  .calendar-day {
+    min-height: 48px !important;
+    padding: 5px !important;
+  }
+
+  .calendar-day strong {
+    font-size: 13px !important;
+  }
+
+  .calendar-day small {
+    font-size: 8px !important;
+  }
+
+  .public-patient-phone {
+    max-width: 100% !important;
+    min-height: auto !important;
+    border-width: 6px !important;
+    border-radius: 28px !important;
+  }
+
+  .modal-content,
+  .qr-modal-content,
+  .patient-edit-modal,
+  .employee-edit-modal,
+  .employee-modal-clean {
+    width: 96vw !important;
+    padding: 18px !important;
+    border-radius: 22px !important;
+  }
+}
+
+/* ADMIN DASHBOARD - SCHEDULE SORT HEADER */
+#dashboardPage .dashboard-table th.sortable-th {
+  cursor: pointer !important;
+  user-select: none !important;
+  position: relative !important;
+  color: #31525a !important;
+}
+
+#dashboardPage .dashboard-table th.sortable-th::after {
+  content: "↕" !important;
+  margin-left: 8px !important;
+  color: #0f7f8c !important;
+  font-size: 12px !important;
+  opacity: 0.55 !important;
+}
+
+#dashboardPage .dashboard-table th.sortable-th.active {
+  color: #0f7f8c !important;
+}
+
+#dashboardPage .dashboard-table th.sortable-th.active.asc::after {
+  content: "↑" !important;
+  opacity: 1 !important;
+}
+
+#dashboardPage .dashboard-table th.sortable-th.active.desc::after {
+  content: "↓" !important;
+  opacity: 1 !important;
+}
+
+#dashboardPage .dashboard-table th.sortable-th:hover {
+  color: #0f7f8c !important;
+}
+
+/* =========================================================
+   PATIENT PORTAL BOOK APPOINTMENT MOBILE FIX
+========================================================= */
+
+#patientAccountPage-book .fc-detail-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 22px !important;
+  border-radius: 24px !important;
+  overflow: visible !important;
+}
+
+#patientAccountPage-book h2 {
+  margin-bottom: 8px !important;
+  color: #082f38 !important;
+  font-size: 24px !important;
+  font-weight: 900 !important;
+}
+
+#patientAccountPage-book p {
+  margin-bottom: 16px !important;
+  color: #63757d !important;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+}
+
+#patientAccountPage-book .fc-input,
+#patientAccountPage-book select,
+#patientAccountPage-book input {
+  width: 100% !important;
+  min-height: 52px !important;
+  margin-bottom: 12px !important;
+  padding: 12px 14px !important;
+  border: 1px solid #a7dfe8 !important;
+  border-radius: 16px !important;
+  background-color: #ffffff !important;
+  color: #1f2933 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: normal !important;
+}
+
+#patientAccountPage-book select.fc-input {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #0f6d7a 50%),
+    linear-gradient(135deg, #0f6d7a 50%, transparent 50%) !important;
+  background-position:
+    calc(100% - 22px) 50%,
+    calc(100% - 16px) 50% !important;
+  background-size: 6px 6px, 6px 6px !important;
+  background-repeat: no-repeat !important;
+}
+
+#patientAccountPage-book .fc-submit-btn {
+  width: 100% !important;
+  min-height: 54px !important;
+  margin-top: 8px !important;
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, #0f6d7a, #07879a) !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+}
+
+#patientAccountPage-book #accountBookingMessage {
+  margin-top: 14px !important;
+  padding: 12px 14px !important;
+  border-radius: 14px !important;
+  background: #ecfdf3 !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+}
+
+#patientAccountPage-book #accountBookingMessage.fc-error {
+  background: #fdeaea !important;
+}
+
+@media (max-width: 576px) {
+  #patientAccountPage-book {
+    width: 100% !important;
+    padding: 0 14px 24px !important;
+  }
+
+  #patientAccountPage-book .fc-detail-card {
+    padding: 18px !important;
+    border-radius: 22px !important;
+  }
+
+  #patientAccountPage-book h2 {
+    font-size: 21px !important;
+  }
+
+  #patientAccountPage-book .fc-input,
+  #patientAccountPage-book select,
+  #patientAccountPage-book input {
+    min-height: 50px !important;
+    font-size: 13px !important;
+  }
+}

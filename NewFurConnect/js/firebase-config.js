@@ -7,7 +7,21 @@ const firebaseConfig = {
   appId: "1:816990132302:web:7ec14fc9a126fde580cb1f"
 };
 
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 
 const db = firebase.firestore();
 window.db = db;
+window.firebase = firebase;
+
+if (typeof firebase.storage === "function") {
+  window.storage = firebase.storage();
+} else {
+  window.storage = null;
+  console.warn("Firebase Storage is not loaded on this page. Firestore will still work.");
+}
+
+console.log("Firebase config loaded.");
+console.log("Firestore ready:", !!window.db);
+console.log("Storage ready:", !!window.storage);

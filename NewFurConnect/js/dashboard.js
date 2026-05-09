@@ -1,8 +1,14 @@
 document.addEventListener("DOMContentLoaded", async function () {
   startPhilippineDateTimeClock();
 
-  await syncDashboardFromFirebaseToLocalStorage();
-  loadDashboardLocalStorage();
+await syncDashboardFromFirebaseToLocalStorage();
+await syncDashboardOnlineAppointmentRequestsFromFirebaseToLocalStorage();
+
+repairDashboardLoggedAppointments();
+
+loadDashboardLocalStorage();
+
+  await runAutoMissedAppointmentCheck();
 
   renderUpcomingAppointments();
   renderPatientRebookingRequests();
@@ -13,14 +19,19 @@ document.addEventListener("DOMContentLoaded", async function () {
   initializeDashboardEditModal();
   initializeFinishAppointmentModalEvents();
   initializeDashboardEvents();
+
+  setInterval(runAutoMissedAppointmentCheck, 60000);
 });
 
 /* ================= CONFIG ================= */
 const DASHBOARD_ROWS_PER_PAGE = 8;
 
+let upcomingScheduleSortDirection = "asc";
+
 /* ================= STATE ================= */
 let currentDashboardEditId = null;
 let pendingFinishedAppointmentId = null;
+let autoMissedCheckRunning = false;
 
 let upcomingPage = 1;
 let rebookingPage = 1;
@@ -45,6 +56,75 @@ const DASHBOARD_STORAGE_KEYS = {
   recentActivities: "recentActivities",
   archivedAppointments: "archivedAppointments"
 };
+
+function getAppointmentDateTime(appointment) {
+  const dateValue =
+    appointment.appointmentDate ||
+    appointment.date ||
+    appointment.scheduleDate ||
+    getDashboardAppointmentDate(appointment) ||
+    "";
+
+  const rawTime =
+    appointment.appointmentTime ||
+    appointment.time ||
+    appointment.scheduleTime ||
+    getDashboardAppointmentTime(appointment) ||
+    "";
+
+  const firstTime = String(rawTime)
+    .split(",")
+    .map(function (item) {
+      return item.trim();
+    })
+    .filter(Boolean)[0] || "00:00";
+
+  if (!dateValue) {
+    return new Date(0);
+  }
+
+  const parsedDate = new Date(`${dateValue}T${firstTime}`);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return new Date(0);
+  }
+
+  return parsedDate;
+}
+
+function sortUpcomingAppointmentsBySchedule(appointments) {
+  return [...appointments].sort(function (a, b) {
+    const dateA = getAppointmentDateTime(a).getTime();
+    const dateB = getAppointmentDateTime(b).getTime();
+
+    if (dateA === dateB) {
+      return Number(a.id || 0) - Number(b.id || 0);
+    }
+
+    if (upcomingScheduleSortDirection === "asc") {
+      return dateA - dateB;
+    }
+
+    return dateB - dateA;
+  });
+}
+
+function updateUpcomingScheduleSortHeader() {
+  const sortHeader = document.getElementById("upcomingScheduleSort");
+
+  if (!sortHeader) return;
+
+  sortHeader.classList.add("active");
+  sortHeader.classList.toggle("asc", upcomingScheduleSortDirection === "asc");
+  sortHeader.classList.toggle("desc", upcomingScheduleSortDirection === "desc");
+
+  sortHeader.setAttribute(
+    "title",
+    upcomingScheduleSortDirection === "asc"
+      ? "Sorted by nearest schedule first"
+      : "Sorted by latest schedule first"
+  );
+}
 
 function getLocalStorageArray(key) {
   try {
@@ -190,42 +270,122 @@ function normalizeFirebaseDate(value) {
   return value;
 }
 
+function removeUndefinedFirebaseFields(data) {
+  const cleaned = {};
+
+  Object.keys(data || {}).forEach(function (key) {
+    if (data[key] !== undefined) {
+      cleaned[key] = data[key];
+    }
+  });
+
+  return cleaned;
+}
+
+function getDashboardPatientIdVariants(value) {
+  const raw = String(value || "").trim();
+  const noPrefix = raw.replace(/^P-/i, "").trim();
+  const withPrefix = noPrefix ? `P-${noPrefix}` : "";
+
+  return [...new Set([raw, noPrefix, withPrefix].filter(Boolean))];
+}
+
 async function getPatientFirebaseDocRef(recordOrId) {
   if (!window.db) {
     throw new Error("Firestore is not initialized.");
   }
 
-  const firebaseDocId =
-    typeof recordOrId === "object" ? recordOrId.firebaseDocId : "";
+  const record = typeof recordOrId === "object" && recordOrId !== null ? recordOrId : {};
+
+  const firebaseDocId = String(
+    record.firebaseDocId ||
+    record.docId ||
+    record.documentId ||
+    ""
+  ).trim();
 
   const patientId =
-    typeof recordOrId === "object" ? recordOrId.id : recordOrId;
+    typeof recordOrId === "object"
+      ? record.id || record.patientId || record.patientID || ""
+      : recordOrId;
+
+  const idVariants = getDashboardPatientIdVariants(patientId);
 
   if (firebaseDocId) {
-    return window.db.collection("patientRecords").doc(firebaseDocId);
+    const docRef = window.db.collection("patientRecords").doc(firebaseDocId);
+    const docSnap = await docRef.get();
+
+    if (docSnap.exists) {
+      return docRef;
+    }
+
+    console.warn("firebaseDocId not found. Trying ID variants instead:", firebaseDocId);
   }
 
-  const snapshot = await window.db
-    .collection("patientRecords")
-    .where("id", "==", String(patientId))
-    .limit(1)
-    .get();
+  // Try direct Firestore document IDs first: 1004 / P-1004
+  for (const docId of idVariants) {
+    const docRef = window.db.collection("patientRecords").doc(docId);
+    const docSnap = await docRef.get();
 
-  if (snapshot.empty) {
-    throw new Error("Patient document not found in Firebase.");
+    if (docSnap.exists) {
+      return docRef;
+    }
   }
 
-  return snapshot.docs[0].ref;
+  // Try common ID fields inside the document
+  const fieldsToCheck = ["id", "patientId", "patientID"];
+
+  for (const fieldName of fieldsToCheck) {
+    for (const idValue of idVariants) {
+      const snapshot = await window.db
+        .collection("patientRecords")
+        .where(fieldName, "==", idValue)
+        .limit(1)
+        .get();
+
+      if (!snapshot.empty) {
+        return snapshot.docs[0].ref;
+      }
+    }
+  }
+
+  throw new Error(`Patient document not found in Firebase. Tried IDs: ${idVariants.join(", ")}`);
 }
 
 async function updatePatientRecordInFirebase(recordOrId, updates) {
   const docRef = await getPatientFirebaseDocRef(recordOrId);
 
-  await docRef.update({
+  const cleanUpdates = removeUndefinedFirebaseFields({
     ...updates,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   });
+
+  await docRef.update(cleanUpdates);
 }
+
+function cleanFirebaseUpdates(updates) {
+  const cleaned = {};
+
+  Object.keys(updates || {}).forEach(function (key) {
+    if (updates[key] !== undefined) {
+      cleaned[key] = updates[key];
+    }
+  });
+
+  return cleaned;
+}
+
+async function updatePatientRecordInFirebase(recordOrId, updates) {
+  const docRef = await getPatientFirebaseDocRef(recordOrId);
+
+  const cleanUpdates = cleanFirebaseUpdates({
+    ...updates,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  await docRef.update(cleanUpdates);
+}
+
 
 async function saveRecentActivityToFirebase(activity) {
   if (!window.db) return;
@@ -243,6 +403,280 @@ async function saveArchivedAppointmentLogToFirebase(logRecord) {
     ...logRecord,
     firebaseCreatedAt: firebase.firestore.FieldValue.serverTimestamp()
   });
+}
+
+function getDashboardFirestoreDb() {
+  if (window.db) {
+    return window.db;
+  }
+
+  if (
+    window.firebase &&
+    firebase.apps &&
+    firebase.apps.length > 0 &&
+    typeof firebase.firestore === "function"
+  ) {
+    window.db = firebase.firestore();
+    return window.db;
+  }
+
+  return null;
+}
+
+function cleanDashboardFirebaseData(data) {
+  const cleaned = {};
+
+  Object.keys(data || {}).forEach(function (key) {
+    if (data[key] !== undefined) {
+      cleaned[key] = data[key];
+    }
+  });
+
+  return cleaned;
+}
+
+async function syncDashboardOnlineAppointmentRequestsFromFirebaseToLocalStorage() {
+  const db = getDashboardFirestoreDb();
+
+  if (!db) {
+    console.warn("Firestore is not ready. Rebooking requests will use localStorage only.");
+    return;
+  }
+
+  try {
+    const snapshot = await db.collection("onlineAppointmentRequests").get();
+
+    const firebaseRequests = snapshot.docs
+      .map(function (doc) {
+        const data = doc.data();
+
+        return {
+          firebaseDocId: doc.id,
+          ...data,
+          createdAt: normalizeFirebaseDate(data.createdAt),
+          requestedAt: normalizeFirebaseDate(data.requestedAt),
+          updatedAt: normalizeFirebaseDate(data.updatedAt),
+          approvedAt: normalizeFirebaseDate(data.approvedAt),
+          declinedAt: normalizeFirebaseDate(data.declinedAt)
+        };
+      })
+      .filter(function (request) {
+        const status = String(request.status || "Pending").toLowerCase();
+
+        return status === "pending";
+      });
+
+    setLocalStorageArray(
+      DASHBOARD_STORAGE_KEYS.onlineAppointmentRequests,
+      firebaseRequests.sort(function (a, b) {
+        return getRequestSortTime(b) - getRequestSortTime(a);
+      })
+    );
+
+    console.log("Dashboard Firebase rebooking requests loaded:", firebaseRequests.length);
+  } catch (error) {
+    console.error("Dashboard Firebase rebooking sync error:", error);
+    showNotification("Failed to sync rebooking requests from Firebase.", "warning");
+  }
+}
+
+async function getOnlineAppointmentRequestDocRef(request) {
+  const db = getDashboardFirestoreDb();
+
+  if (!db || !request) {
+    return null;
+  }
+
+  const requestId = String(request.requestId || "").trim();
+  const firebaseDocId = String(request.firebaseDocId || "").trim();
+
+  const possibleDocIds = [
+    firebaseDocId,
+    requestId
+  ].filter(Boolean);
+
+  for (const docId of possibleDocIds) {
+    const docRef = db.collection("onlineAppointmentRequests").doc(docId);
+    const docSnap = await docRef.get();
+
+    if (docSnap.exists) {
+      return docRef;
+    }
+  }
+
+  if (requestId) {
+    const snapshot = await db
+      .collection("onlineAppointmentRequests")
+      .where("requestId", "==", requestId)
+      .limit(1)
+      .get();
+
+    if (!snapshot.empty) {
+      return snapshot.docs[0].ref;
+    }
+  }
+
+  const patientId = String(request.patientId || request.id || "").trim();
+
+  if (patientId) {
+    const snapshot = await db
+      .collection("onlineAppointmentRequests")
+      .where("patientId", "==", patientId)
+      .limit(20)
+      .get();
+
+    if (!snapshot.empty) {
+      const matchedDoc = snapshot.docs.find(function (doc) {
+        const data = doc.data();
+
+        return (
+          String(data.requestedDate || data.appointmentDate || "") === String(request.requestedDate || request.appointmentDate || "") &&
+          String(data.requestedTime || data.appointmentTime || "") === String(request.requestedTime || request.appointmentTime || "") &&
+          String(data.service || data.appointmentType || "") === String(request.service || request.appointmentType || "")
+        );
+      });
+
+      return matchedDoc ? matchedDoc.ref : snapshot.docs[0].ref;
+    }
+  }
+
+  return null;
+}
+
+async function updateOnlineAppointmentRequestStatusInFirebase(request, status) {
+  const db = getDashboardFirestoreDb();
+
+  if (!db) {
+    return;
+  }
+
+  const docRef = await getOnlineAppointmentRequestDocRef(request);
+
+  if (!docRef) {
+    console.warn("Online appointment request document not found in Firebase.");
+    return;
+  }
+
+  const now = new Date().toISOString();
+
+  const updates = {
+    status,
+    updatedAt: now,
+    firebaseUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  if (status === "Approved") {
+    updates.approvedAt = now;
+  }
+
+  if (status === "Declined") {
+    updates.declinedAt = now;
+  }
+
+  await docRef.update(updates);
+}
+
+async function createOrUpdatePatientAppointmentFromRequest(request) {
+  const db = getDashboardFirestoreDb();
+
+  const patientId = String(request.patientId || request.id || "").trim();
+
+  if (!patientId) {
+    throw new Error("Patient ID is missing from the request.");
+  }
+
+  const now = new Date().toISOString();
+
+  const appointmentUpdates = cleanDashboardFirebaseData({
+    petName: request.petName || undefined,
+    petSpecies: request.petSpecies || undefined,
+    breed: request.breed || request.petBreed || undefined,
+    ownerName: request.ownerName || undefined,
+    contactNumber: request.contactNumber || request.ownerContact || undefined,
+    ownerContact: request.contactNumber || request.ownerContact || undefined,
+    email: request.email || undefined,
+
+    appointmentDate: request.requestedDate || request.appointmentDate || "",
+    appointmentTime: request.requestedTime || request.appointmentTime || "",
+    appointmentType: request.service || request.appointmentType || "",
+    appointmentStatus: "Waiting",
+
+    appointmentLogged: false,
+    appointmentLoggedAt: "",
+    appointmentArchived: false,
+    archived: false,
+    isArchived: false,
+    status: "active",
+
+    appointmentCreatedAt: request.requestedAt || request.createdAt || now,
+    appointmentUpdatedAt: now,
+    lastAppointmentRequestId: request.requestId || request.firebaseDocId || ""
+  });
+
+  const existingIndex = patientRecords.findIndex(function (record) {
+    return String(record.id) === String(patientId);
+  });
+
+  if (existingIndex !== -1) {
+    const existingRecord = patientRecords[existingIndex];
+
+    await updatePatientRecordInFirebase(existingRecord, appointmentUpdates);
+
+    patientRecords[existingIndex] = {
+      ...existingRecord,
+      ...appointmentUpdates,
+      updatedAt: now
+    };
+
+    return patientRecords[existingIndex];
+  }
+
+  const newRecord = {
+    id: patientId,
+    petName: request.petName || "",
+    petSpecies: request.petSpecies || "",
+    breed: request.breed || request.petBreed || "",
+    ownerName: request.ownerName || "",
+    contactNumber: request.contactNumber || request.ownerContact || "",
+    ownerContact: request.contactNumber || request.ownerContact || "",
+    email: request.email || "",
+
+    appointmentDate: request.requestedDate || request.appointmentDate || "",
+    appointmentTime: request.requestedTime || request.appointmentTime || "",
+    appointmentType: request.service || request.appointmentType || "",
+    appointmentStatus: "Waiting",
+
+    appointmentLogged: false,
+    appointmentLoggedAt: "",
+    appointmentArchived: false,
+    archived: false,
+    isArchived: false,
+    status: "active",
+
+    notes: "",
+    createdAt: now,
+    appointmentCreatedAt: request.requestedAt || request.createdAt || now,
+    appointmentUpdatedAt: now,
+    updatedAt: now
+  };
+
+  if (db) {
+    await db
+      .collection("patientRecords")
+      .doc(patientId)
+      .set(
+        cleanDashboardFirebaseData({
+          ...newRecord,
+          firebaseCreatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          firebaseUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }),
+        { merge: true }
+      );
+  }
+
+  patientRecords.unshift(newRecord);
+
+  return newRecord;
 }
 
 /* ================= FORMATTERS ================= */
@@ -458,7 +892,7 @@ function getClinicTimeSlots() {
 function getServiceDurationSlots(serviceType) {
   switch (serviceType) {
     case "Grooming":
-      return 3;
+      return 4;
 
     case "Vaccination":
       return 1;
@@ -504,6 +938,136 @@ function canDashboardAutoSelectSlots(date, startIndex, neededSlots, clinicSlots)
   return true;
 }
 
+/* ================= AUTO MISSED APPOINTMENTS ================= */
+
+async function runAutoMissedAppointmentCheck() {
+  if (autoMissedCheckRunning) return;
+
+  autoMissedCheckRunning = true;
+
+  try {
+    loadDashboardLocalStorage();
+
+    const hasMissedUpdates = await autoMarkMissedAppointments();
+
+    if (hasMissedUpdates) {
+      loadDashboardLocalStorage();
+
+      renderUpcomingAppointments();
+      renderRecentActivity();
+      renderDashboardStats();
+    }
+} catch (error) {
+  console.error("Firebase dashboard edit error:", error);
+  showNotification(error.message || "Failed to update appointment in Firebase.", "error");
+}
+}
+
+function getAppointmentEndDateTime(record) {
+  const appointmentDate = getDashboardAppointmentDate(record);
+  const appointmentType = getDashboardAppointmentType(record);
+  const appointmentSlots = getRecordAppointmentSlots(record);
+
+  if (!appointmentDate || appointmentSlots.length === 0) {
+    return null;
+  }
+
+  const startTime = appointmentSlots[0];
+
+  if (!startTime || !String(startTime).includes(":")) {
+    return null;
+  }
+
+  const serviceDurationSlots = getServiceDurationSlots(appointmentType) || 1;
+
+  const durationSlots = Math.max(
+    appointmentSlots.length,
+    serviceDurationSlots,
+    1
+  );
+
+  const appointmentEnd = new Date(`${appointmentDate}T${startTime}:00+08:00`);
+
+  if (Number.isNaN(appointmentEnd.getTime())) {
+    return null;
+  }
+
+  appointmentEnd.setMinutes(appointmentEnd.getMinutes() + durationSlots * 30);
+
+  return appointmentEnd;
+}
+
+function shouldAutoMarkAsMissed(record) {
+  if (!isActiveAppointment(record)) {
+    return false;
+  }
+
+  const currentStatus = String(record.appointmentStatus || "Waiting").toLowerCase();
+
+  if (currentStatus !== "waiting") {
+    return false;
+  }
+
+  const appointmentEnd = getAppointmentEndDateTime(record);
+
+  if (!appointmentEnd) {
+    return false;
+  }
+
+  return new Date() > appointmentEnd;
+}
+
+async function autoMarkMissedAppointments() {
+  if (!window.db) {
+    console.warn("Firestore is not ready. Auto missed update skipped.");
+    return false;
+  }
+
+  const missedRecords = patientRecords.filter(function (record) {
+    return shouldAutoMarkAsMissed(record);
+  });
+
+  if (missedRecords.length === 0) {
+    return false;
+  }
+
+  const now = new Date().toISOString();
+
+  try {
+    for (const record of missedRecords) {
+      await updatePatientRecordInFirebase(record, {
+        appointmentStatus: "Missed",
+        appointmentUpdatedAt: now,
+        autoMissedAt: now
+      });
+
+      record.appointmentStatus = "Missed";
+      record.appointmentUpdatedAt = now;
+      record.autoMissedAt = now;
+      record.updatedAt = now;
+    }
+
+    const activity = {
+      dateTime: new Date().toLocaleString(),
+      module: "Appointment",
+      action: "Auto Marked Missed",
+      details: `${missedRecords.length} appointment(s) automatically marked as missed`
+    };
+
+    await saveRecentActivityToFirebase(activity);
+
+    recentActivities.unshift(activity);
+
+    saveDashboardLocalStorage();
+
+    return true;
+  } catch (error) {
+    console.error("Auto missed Firebase update error:", error);
+    showNotification("Failed to auto-update missed appointments in Firebase.", "error");
+    return false;
+  }
+}
+
 /* ================= UPCOMING APPOINTMENTS ================= */
 function renderUpcomingAppointments() {
   loadDashboardLocalStorage();
@@ -511,10 +1075,12 @@ function renderUpcomingAppointments() {
   const body = document.getElementById("upcomingAppointmentsBody");
   if (!body) return;
 
+  updateUpcomingScheduleSortHeader();
+
   const searchValue =
     document.getElementById("upcomingSearch")?.value.toLowerCase().trim() || "";
 
-  const filtered = patientRecords
+  let filtered = patientRecords
     .filter(isActiveAppointment)
     .filter(function (rec) {
       const searchableText = [
@@ -531,10 +1097,9 @@ function renderUpcomingAppointments() {
         .toLowerCase();
 
       return searchValue === "" || searchableText.includes(searchValue);
-    })
-    .sort(function (a, b) {
-      return getDashboardRecordSortTime(b) - getDashboardRecordSortTime(a);
     });
+
+  filtered = sortUpcomingAppointmentsBySchedule(filtered);
 
   const totalPages = Math.ceil(filtered.length / DASHBOARD_ROWS_PER_PAGE) || 1;
   if (upcomingPage > totalPages) upcomingPage = totalPages;
@@ -1047,11 +1612,27 @@ function closeDashboardEditModal() {
 async function saveDashboardEdit(event) {
   event.preventDefault();
 
+  const saveBtn = document.querySelector('button[form="dashboardEditForm"][type="submit"]');
+
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
+  }
+
   const record = patientRecords.find(function (item) {
     return String(item.id) === String(currentDashboardEditId);
   });
 
-  if (!record) return;
+  if (!record) {
+    showNotification("Appointment record not found.", "error");
+
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save All Changes";
+    }
+
+    return;
+  }
 
   const service = getValue("dashEditService");
   const date = getValue("dashEditDate");
@@ -1059,6 +1640,12 @@ async function saveDashboardEdit(event) {
 
   if (!service || !date || !time) {
     showNotification("Please select service, date, and time.", "error");
+
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save All Changes";
+    }
+
     return;
   }
 
@@ -1078,8 +1665,7 @@ async function saveDashboardEdit(event) {
     appointmentStatus: getValue("dashEditStatus") || "Waiting",
 
     notes: getValue("dashEditNotes").trim(),
-    appointmentUpdatedAt: now,
-    updatedAt: now
+    appointmentUpdatedAt: now
   };
 
   const activity = {
@@ -1091,11 +1677,19 @@ async function saveDashboardEdit(event) {
 
   try {
     await updatePatientRecordInFirebase(record, updates);
-    await saveRecentActivityToFirebase(activity);
 
-    Object.assign(record, updates);
+    // Activity log should not block the actual appointment update.
+    try {
+      await saveRecentActivityToFirebase(activity);
+      recentActivities.unshift(activity);
+    } catch (activityError) {
+      console.warn("Appointment was updated, but activity log failed:", activityError);
+    }
 
-    recentActivities.unshift(activity);
+    Object.assign(record, {
+      ...updates,
+      updatedAt: now
+    });
 
     saveDashboardLocalStorage();
 
@@ -1104,10 +1698,15 @@ async function saveDashboardEdit(event) {
     renderDashboardStats();
 
     closeDashboardEditModal();
-    showNotification("Appointment updated successfully");
+    showNotification("Appointment updated successfully.", "success");
   } catch (error) {
     console.error("Firebase dashboard edit error:", error);
-    showNotification("Failed to update appointment in Firebase.", "error");
+    showNotification(error.message || "Failed to update appointment in Firebase.", "error");
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save All Changes";
+    }
   }
 }
 
@@ -1319,22 +1918,24 @@ patientRecords[index] = {
 async function moveAllUpcomingAppointmentsToLogs() {
   loadDashboardLocalStorage();
 
-  const finishedAppointments = patientRecords.filter(function (record) {
+  const loggableAppointments = patientRecords.filter(function (record) {
+    const status = String(record.appointmentStatus || "").toLowerCase();
+
     return (
       isActiveAppointment(record) &&
-      String(record.appointmentStatus || "").toLowerCase() === "finished"
+      (status === "finished" || status === "missed")
     );
   });
 
-  if (finishedAppointments.length === 0) {
-    showNotification("No finished appointments to move to logs.", "info");
+  if (loggableAppointments.length === 0) {
+    showNotification("No finished or missed appointments to move to logs.", "info");
     return;
   }
 
   const now = new Date().toISOString();
 
   try {
-    for (const record of finishedAppointments) {
+    for (const record of loggableAppointments) {
       const finalStatus = record.appointmentStatus || "Finished";
       const logRecord = createAppointmentLogRecord(record, finalStatus);
 
@@ -1383,11 +1984,11 @@ async function moveAllUpcomingAppointmentsToLogs() {
     }
 
     patientRecords = patientRecords.map(function (record) {
-      const isFinished = finishedAppointments.some(function (item) {
+      const isLoggable = loggableAppointments.some(function (item) {
         return String(item.id) === String(record.id);
       });
 
-      if (!isFinished) return record;
+      if (!isLoggable) return record;
 
       return {
         ...record,
@@ -1413,8 +2014,8 @@ async function moveAllUpcomingAppointmentsToLogs() {
     const activity = {
       dateTime: new Date().toLocaleString(),
       module: "Appointment Logs",
-      action: "Moved Finished Appointments",
-      details: `${finishedAppointments.length} finished appointment(s) moved to appointment logs`
+      action: "Moved Completed Appointments",
+      details: `${loggableAppointments.length} finished/missed appointment(s) moved to appointment logs`
     };
 
     await window.db.collection("recentActivities").add({
@@ -1432,7 +2033,7 @@ async function moveAllUpcomingAppointmentsToLogs() {
     renderRecentActivity();
     renderDashboardStats();
 
-    showNotification("Finished appointment(s) moved to logs successfully.", "success");
+    showNotification("Finished/missed appointment(s) moved to logs successfully.", "success");
   } catch (error) {
     console.error("Move appointment logs Firebase error:", error);
     showNotification("Failed to move appointment(s) to logs.", "error");
@@ -1481,49 +2082,80 @@ function getAppointmentLogKey(item) {
 }
 
 /* ================= ACTIONS ================= */
-function handleRebooking(action, id) {
+async function handleRebooking(action, id) {
+  loadDashboardLocalStorage();
+
   const index = onlineAppointmentRequests.findIndex(function (request) {
     return (
-      String(request.requestId || request.id) === String(id)
+      String(request.requestId || request.firebaseDocId || request.id) === String(id)
     );
   });
 
-  if (index === -1) return;
+  if (index === -1) {
+    showNotification("Rebooking request not found.", "error");
+    return;
+  }
 
   const req = onlineAppointmentRequests[index];
 
-  if (action === "approve") {
-    approveRebookingRequest(req);
+  const actionText = action === "approve" ? "Approved Rebooking" : "Declined Rebooking";
+  const statusText = action === "approve" ? "Approved" : "Declined";
 
-    recentActivities.unshift({
-      dateTime: new Date().toLocaleString(),
-      module: "Appointment",
-      action: "Approved Rebooking",
-      details: `${req.petName || "Patient"} appointment approved`
+  const activity = {
+    dateTime: new Date().toLocaleString(),
+    module: "Appointment",
+    action: actionText,
+    details:
+      action === "approve"
+        ? `${req.petName || "Patient"} appointment approved`
+        : `${req.petName || "Patient"} rebooking declined`
+  };
+
+  try {
+    if (action === "approve") {
+      await createOrUpdatePatientAppointmentFromRequest(req);
+      await updateOnlineAppointmentRequestStatusInFirebase(req, "Approved");
+    }
+
+    if (action === "decline") {
+      await updateOnlineAppointmentRequestStatusInFirebase(req, "Declined");
+    }
+
+    try {
+      await saveRecentActivityToFirebase(activity);
+    } catch (activityError) {
+      console.warn("Rebooking activity log failed:", activityError);
+    }
+
+    recentActivities.unshift(activity);
+
+    onlineAppointmentRequests = onlineAppointmentRequests.filter(function (request) {
+      return String(request.requestId || request.firebaseDocId || request.id) !== String(id);
     });
 
-    showNotification("Rebooking approved successfully");
+    upcomingPage = 1;
+    rebookingPage = 1;
+
+    saveDashboardLocalStorage();
+
+    renderUpcomingAppointments();
+    renderPatientRebookingRequests();
+    renderRecentActivity();
+    renderDashboardStats();
+
+    showNotification(
+      action === "approve"
+        ? "Rebooking approved and added to appointments."
+        : "Rebooking declined successfully.",
+      action === "approve" ? "success" : "error"
+    );
+  } catch (error) {
+    console.error("Firebase rebooking action error:", error);
+    showNotification(
+      error.message || `Failed to ${statusText.toLowerCase()} rebooking request.`,
+      "error"
+    );
   }
-
-  if (action === "decline") {
-    recentActivities.unshift({
-      dateTime: new Date().toLocaleString(),
-      module: "Appointment",
-      action: "Declined Rebooking",
-      details: `${req.petName || "Patient"} rebooking declined`
-    });
-
-    showNotification("Rebooking declined successfully", "error");
-  }
-
-  onlineAppointmentRequests.splice(index, 1);
-
-  saveDashboardLocalStorage();
-
-  renderUpcomingAppointments();
-  renderPatientRebookingRequests();
-  renderRecentActivity();
-  renderDashboardStats();
 }
 
 function approveRebookingRequest(req) {
@@ -1652,13 +2284,40 @@ function initializeDashboardEvents() {
   const rebookingSearch = document.getElementById("rebookingSearch");
   const clearActivityBtn = document.getElementById("clearActivityLogsBtn");
   const appointmentLogsBtn = document.getElementById("appointmentLogsBtn");
+  const upcomingScheduleSort = document.getElementById("upcomingScheduleSort");
+
+  if (upcomingScheduleSort) {
+    updateUpcomingScheduleSortHeader();
+
+    upcomingScheduleSort.addEventListener("click", function () {
+      upcomingScheduleSortDirection =
+        upcomingScheduleSortDirection === "asc" ? "desc" : "asc";
+
+      upcomingPage = 1;
+      updateUpcomingScheduleSortHeader();
+      renderUpcomingAppointments();
+    });
+
+    upcomingScheduleSort.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter" && event.key !== " ") return;
+
+      event.preventDefault();
+
+      upcomingScheduleSortDirection =
+        upcomingScheduleSortDirection === "asc" ? "desc" : "asc";
+
+      upcomingPage = 1;
+      updateUpcomingScheduleSortHeader();
+      renderUpcomingAppointments();
+    });
+  }
 
   if (appointmentLogsBtn) {
-  appointmentLogsBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    moveAllUpcomingAppointmentsToLogs();
-  });
-}
+    appointmentLogsBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      moveAllUpcomingAppointmentsToLogs();
+    });
+  }
 
   if (upcomingSearch) {
     upcomingSearch.addEventListener("input", function () {
@@ -1674,24 +2333,24 @@ function initializeDashboardEvents() {
     });
   }
 
-if (clearActivityBtn) {
-  clearActivityBtn.addEventListener("click", async function () {
-    try {
-      await clearRecentActivitiesInFirebase();
+  if (clearActivityBtn) {
+    clearActivityBtn.addEventListener("click", async function () {
+      try {
+        await clearRecentActivitiesInFirebase();
 
-      recentActivities = [];
-      activityPage = 1;
+        recentActivities = [];
+        activityPage = 1;
 
-      setLocalStorageArray(DASHBOARD_STORAGE_KEYS.recentActivities, []);
+        setLocalStorageArray(DASHBOARD_STORAGE_KEYS.recentActivities, []);
 
-      renderRecentActivity();
-      showNotification("Recent activity cleared successfully");
-    } catch (error) {
-      console.error("Firebase clear activity error:", error);
-      showNotification("Failed to clear recent activity in Firebase.", "error");
-    }
-  });
-}
+        renderRecentActivity();
+        showNotification("Recent activity cleared successfully");
+      } catch (error) {
+        console.error("Firebase clear activity error:", error);
+        showNotification("Failed to clear recent activity in Firebase.", "error");
+      }
+    });
+  }
 
   document.addEventListener("click", function (e) {
     const dashboardEditBtn = e.target.closest(".dashboard-edit-btn");
@@ -1742,20 +2401,20 @@ if (clearActivityBtn) {
       return;
     }
 
-const statusItem = e.target.closest(".status-menu button");
+    const statusItem = e.target.closest(".status-menu button");
 
-if (statusItem) {
-  const id = statusItem.dataset.id;
-  const status = statusItem.dataset.status;
+    if (statusItem) {
+      const id = statusItem.dataset.id;
+      const status = statusItem.dataset.status;
 
-  if (status === "Finished") {
-    openFinishAppointmentModal(id);
-    return;
-  }
+      if (status === "Finished") {
+        openFinishAppointmentModal(id);
+        return;
+      }
 
-  updateDashboardAppointmentStatus(id, status);
-  return;
-}
+      updateDashboardAppointmentStatus(id, status);
+      return;
+    }
 
     document.querySelectorAll(".action-dropdown, .status-dropdown").forEach(function (item) {
       item.classList.remove("active");
@@ -2552,11 +3211,3 @@ function repairDashboardLoggedAppointments() {
     setLocalStorageArray(DASHBOARD_STORAGE_KEYS.patientRecords, repairedRecords);
   }
 }
-
-document.addEventListener("DOMContentLoaded", function () {
-  repairDashboardLoggedAppointments();
-
-  loadDashboardLocalStorage();
-  renderUpcomingAppointments();
-  renderDashboardStats();
-});

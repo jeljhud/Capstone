@@ -1,5 +1,7 @@
 document.addEventListener("DOMContentLoaded", async function () {
   await syncRecordsFromFirebaseToLocalStorage();
+  await syncOnlineAppointmentRequestsFromFirebaseToLocalStorage();
+
   loadRecordsLocalStorage();
 
   initializeExportQr();
@@ -22,6 +24,7 @@ let editCalendarDate = new Date();
 let patientRecords = [];
 let archivedPatientRecords = [];
 let onlineAppointmentRequests = [];
+let unsubscribePatientQrListener = null;
 
 /* ================= LOCAL STORAGE ================= */
 const RECORDS_STORAGE_KEYS = {
@@ -169,6 +172,111 @@ async function saveRecentActivityToFirebase(activity) {
     ...activity,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
+}
+
+function getRecordsFirestoreDb() {
+  if (window.db) {
+    return window.db;
+  }
+
+  if (
+    window.firebase &&
+    firebase.apps &&
+    firebase.apps.length > 0 &&
+    typeof firebase.firestore === "function"
+  ) {
+    window.db = firebase.firestore();
+    return window.db;
+  }
+
+  return null;
+}
+
+function cleanRecordsFirebaseData(data) {
+  const cleaned = {};
+
+  Object.keys(data || {}).forEach(function (key) {
+    if (data[key] !== undefined) {
+      cleaned[key] = data[key];
+    }
+  });
+
+  return cleaned;
+}
+
+async function saveOnlineAppointmentRequestToFirebase(request) {
+  const db = getRecordsFirestoreDb();
+
+  if (!db) {
+    return {
+      saved: false,
+      firebaseDocId: ""
+    };
+  }
+
+  const firebaseDocId = String(request.requestId || `REQ-${Date.now()}`);
+
+  const docRef = db
+    .collection("onlineAppointmentRequests")
+    .doc(firebaseDocId);
+
+  await docRef.set(
+    cleanRecordsFirebaseData({
+      ...request,
+      firebaseDocId,
+      updatedAt: request.updatedAt || new Date().toISOString(),
+      firebaseCreatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      firebaseUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }),
+    { merge: true }
+  );
+
+  return {
+    saved: true,
+    firebaseDocId
+  };
+}
+
+async function syncOnlineAppointmentRequestsFromFirebaseToLocalStorage() {
+  const db = getRecordsFirestoreDb();
+
+  if (!db) {
+    console.warn("Firestore is not ready. Online appointment requests will use localStorage only.");
+    return;
+  }
+
+  try {
+    const snapshot = await db.collection("onlineAppointmentRequests").get();
+
+    const firebaseRequests = snapshot.docs
+      .map(function (doc) {
+        const data = doc.data();
+
+        return {
+          firebaseDocId: doc.id,
+          ...data,
+          createdAt: normalizeFirebaseDate(data.createdAt),
+          requestedAt: normalizeFirebaseDate(data.requestedAt),
+          updatedAt: normalizeFirebaseDate(data.updatedAt)
+        };
+      })
+      .filter(function (request) {
+        const status = String(request.status || "Pending").toLowerCase();
+
+        return !["approved", "declined", "cancelled", "canceled", "completed"].includes(status);
+      });
+
+    setLocalStorageArray(
+      RECORDS_STORAGE_KEYS.onlineAppointmentRequests,
+      firebaseRequests.sort(function (a, b) {
+        return new Date(b.requestedAt || b.createdAt || 0) - new Date(a.requestedAt || a.createdAt || 0);
+      })
+    );
+
+    console.log("Firebase online appointment requests loaded:", firebaseRequests.length);
+  } catch (error) {
+    console.error("Firestore online appointment requests load error:", error);
+  }
 }
 
 async function syncRecordsFromFirebaseToLocalStorage() {
@@ -1166,25 +1274,144 @@ function updateArchivedRecordsShowingText(total) {
 }
 
 /* ================= PUBLIC PATIENT QR MOBILE VIEW ================= */
-function initializePublicPatientQrMobileView() {
+async function initializePublicPatientQrMobileView() {
   const params = new URLSearchParams(window.location.search);
   const view = params.get("view");
   const patientId = params.get("id");
 
   if (view !== "patient" || !patientId) return;
 
-  loadRecordsLocalStorage();
+  let patient = null;
 
-  const patient = patientRecords.find(function (record) {
-    return String(record.id) === String(patientId);
-  });
+  try {
+    patient = await fetchPatientRecordFromFirebase(patientId);
+  } catch (error) {
+    console.error("Firebase QR patient fetch error:", error);
+  }
+
+  if (!patient) {
+    loadRecordsLocalStorage();
+
+    patient = patientRecords.find(function (record) {
+      return String(record.id) === String(patientId);
+    });
+  }
 
   if (!patient) {
     showPatientQrNotFoundPage();
     return;
   }
 
+  upsertPatientRecordToLocal(patient);
   showPatientQrMobilePage(patient);
+  startPatientQrFirebaseListener(patientId);
+}
+
+async function fetchPatientRecordFromFirebase(patientId) {
+  if (!window.db) return null;
+
+  const snapshot = await window.db
+    .collection("patientRecords")
+    .where("id", "==", String(patientId))
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  const doc = snapshot.docs[0];
+  const data = doc.data();
+
+  return {
+    firebaseDocId: doc.id,
+    ...data,
+    createdAt: normalizeFirebaseDate(data.createdAt),
+    updatedAt: normalizeFirebaseDate(data.updatedAt),
+    archivedAt: normalizeFirebaseDate(data.archivedAt),
+    appointmentArchivedAt: normalizeFirebaseDate(data.appointmentArchivedAt),
+    appointmentCreatedAt: normalizeFirebaseDate(data.appointmentCreatedAt),
+    appointmentUpdatedAt: normalizeFirebaseDate(data.appointmentUpdatedAt),
+    appointmentLoggedAt: normalizeFirebaseDate(data.appointmentLoggedAt)
+  };
+}
+
+function startPatientQrFirebaseListener(patientId) {
+  if (!window.db) {
+    console.warn("Firestore is not ready. QR patient live sync skipped.");
+    return;
+  }
+
+  if (unsubscribePatientQrListener) {
+    unsubscribePatientQrListener();
+    unsubscribePatientQrListener = null;
+  }
+
+  unsubscribePatientQrListener = window.db
+    .collection("patientRecords")
+    .where("id", "==", String(patientId))
+    .limit(1)
+    .onSnapshot(
+      function (snapshot) {
+        if (snapshot.empty) {
+          showPatientQrNotFoundPage("This patient record no longer exists.");
+          return;
+        }
+
+        const doc = snapshot.docs[0];
+        const data = doc.data();
+
+        const patient = {
+          firebaseDocId: doc.id,
+          ...data,
+          createdAt: normalizeFirebaseDate(data.createdAt),
+          updatedAt: normalizeFirebaseDate(data.updatedAt),
+          archivedAt: normalizeFirebaseDate(data.archivedAt),
+          appointmentArchivedAt: normalizeFirebaseDate(data.appointmentArchivedAt),
+          appointmentCreatedAt: normalizeFirebaseDate(data.appointmentCreatedAt),
+          appointmentUpdatedAt: normalizeFirebaseDate(data.appointmentUpdatedAt),
+          appointmentLoggedAt: normalizeFirebaseDate(data.appointmentLoggedAt)
+        };
+
+        if (isPatientRecordArchived(patient)) {
+          showPatientQrNotFoundPage("This patient record is archived.");
+          return;
+        }
+
+        upsertPatientRecordToLocal(patient);
+
+        window.__currentPatientId = patient.id;
+        window.__currentPatientFromQR = patient;
+
+        renderPublicPatientSnapshot(patient);
+
+        const accountView = document.getElementById("patientAccountView");
+
+        if (accountView && !accountView.classList.contains("hidden")) {
+          renderPatientAccountView(patient);
+        }
+      },
+      function (error) {
+        console.error("QR patient live sync error:", error);
+      }
+    );
+}
+
+function upsertPatientRecordToLocal(updatedPatient) {
+  if (!updatedPatient || !updatedPatient.id) return;
+
+  patientRecords = patientRecords.filter(function (record) {
+    return String(record.id) !== String(updatedPatient.id);
+  });
+
+  if (!isPatientRecordArchived(updatedPatient)) {
+    patientRecords.unshift(createActivePatientRecord(updatedPatient));
+  }
+
+  savePatientRecords();
+
+  window.__currentPatientId = updatedPatient.id;
+  window.__currentPatientFromQR = updatedPatient;
 }
 
 function showPatientQrMobilePage(patient) {
@@ -1402,9 +1629,18 @@ function initializePatientLoginFormOnly() {
   }
 }
 
-function getCurrentPatientForLogin() {
-  loadRecordsLocalStorage();
+const bookingService = document.getElementById("accountBookingService");
+const bookingDate = document.getElementById("accountBookingDate");
 
+if (bookingService) {
+  bookingService.addEventListener("change", populatePatientBookingTimeOptions);
+}
+
+if (bookingDate) {
+  bookingDate.addEventListener("change", populatePatientBookingTimeOptions);
+}
+
+function getCurrentPatientForLogin() {
   const params = new URLSearchParams(window.location.search);
 
   const patientId =
@@ -1413,6 +1649,15 @@ function getCurrentPatientForLogin() {
     window.__currentPatientFromQR?.id;
 
   if (!patientId) return null;
+
+  if (
+    window.__currentPatientFromQR &&
+    String(window.__currentPatientFromQR.id) === String(patientId)
+  ) {
+    return window.__currentPatientFromQR;
+  }
+
+  loadRecordsLocalStorage();
 
   const patient = patientRecords.find(function (record) {
     return String(record.id) === String(patientId);
@@ -2197,64 +2442,314 @@ function showPatientSettingsMessage(elementId, message, type = "success") {
 
 /* ================= PATIENT BOOKING REQUEST ================= */
 
-function submitPatientBookingRequest() {
+async function submitPatientBookingRequest() {
   const patient = getCurrentPatientForLogin();
-  if (!patient) return;
+
+  if (!patient) {
+    showPatientBookingMessage(
+      "accountBookingMessage",
+      "Patient record not found.",
+      "error"
+    );
+    return;
+  }
 
   const serviceInput = document.getElementById("accountBookingService");
   const dateInput = document.getElementById("accountBookingDate");
   const timeInput = document.getElementById("accountBookingTime");
-  const messageBox = document.getElementById("accountBookingMessage");
+  const submitBtn = document.getElementById("accountSubmitBookingBtn");
 
   const service = serviceInput?.value || "";
   const date = dateInput?.value || "";
   const time = timeInput?.value || "";
 
   if (!service || !date || !time) {
-    alert("Please complete service, date, and time.");
+    showPatientBookingMessage(
+      "accountBookingMessage",
+      "Please complete service, date, and time.",
+      "error"
+    );
     return;
   }
 
-  onlineAppointmentRequests = getLocalStorageArray(RECORDS_STORAGE_KEYS.onlineAppointmentRequests);
+  if (!isPatientBookingTimeWithinClinicHours(service, time)) {
+    showPatientBookingMessage(
+      "accountBookingMessage",
+      "Selected time is not allowed because the appointment will go beyond 5:00 PM.",
+      "error"
+    );
+    return;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+  }
+
+  const now = new Date().toISOString();
+  const requestId = `REQ-${String(patient.id || "PATIENT").replace(/[^a-zA-Z0-9_-]/g, "")}-${Date.now()}`;
 
   const request = {
-    requestId: Date.now(),
-    id: patient.id,
-    patientId: patient.id,
+    requestId,
+    firebaseDocId: requestId,
+
+    id: patient.id || "",
+    patientId: patient.id || "",
+
     petName: patient.petName || "",
+    petSpecies: patient.petSpecies || "",
+    breed: patient.breed || patient.petBreed || "",
+
     ownerName: patient.ownerName || "",
     contactNumber: patient.contactNumber || patient.ownerContact || "",
     ownerContact: patient.contactNumber || patient.ownerContact || "",
     email: patient.email || "",
+
     service,
     requestedDate: date,
     requestedTime: time,
+
     appointmentDate: date,
     appointmentTime: time,
+    appointmentType: service,
+    appointmentStatus: "Waiting",
+
     status: "Pending",
-    createdAt: new Date().toISOString()
+    source: "Patient Portal",
+    createdAt: now,
+    requestedAt: now,
+    updatedAt: now
   };
 
-  onlineAppointmentRequests.push(request);
-  saveOnlineAppointmentRequests();
-
-  saveRecentActivity({
+  const activity = {
     dateTime: new Date().toLocaleString(),
     module: "Patient Portal",
     action: "Submitted Booking Request",
     details: `${patient.petName || "Patient"} requested ${service}`
-  });
+  };
 
-  if (messageBox) {
-    messageBox.textContent = "Appointment request submitted successfully.";
-    messageBox.classList.remove("hidden");
+  try {
+    // Save locally first so it still works on localserver/offline fallback.
+    onlineAppointmentRequests = getLocalStorageArray(
+      RECORDS_STORAGE_KEYS.onlineAppointmentRequests
+    );
+
+    onlineAppointmentRequests = onlineAppointmentRequests.filter(function (item) {
+      return String(item.requestId || item.firebaseDocId || "") !== String(requestId);
+    });
+
+    onlineAppointmentRequests.unshift(request);
+    saveOnlineAppointmentRequests();
+    saveRecentActivity(activity);
+
+    // Then save to Firebase.
+    const firebaseResult = await saveOnlineAppointmentRequestToFirebase(request);
+
+    if (firebaseResult.saved) {
+      await saveRecentActivityToFirebase(activity);
+
+      onlineAppointmentRequests = onlineAppointmentRequests.map(function (item) {
+        if (String(item.requestId) !== String(requestId)) return item;
+
+        return {
+          ...item,
+          firebaseDocId: firebaseResult.firebaseDocId
+        };
+      });
+
+      saveOnlineAppointmentRequests();
+
+      showPatientBookingMessage(
+        "accountBookingMessage",
+        "Appointment request submitted successfully.",
+        "success"
+      );
+    } else {
+      showPatientBookingMessage(
+        "accountBookingMessage",
+        "Appointment request saved locally. Firebase is not connected on this page.",
+        "error"
+      );
+    }
+
+    if (serviceInput) serviceInput.value = "";
+    if (dateInput) dateInput.value = "";
+    if (timeInput) timeInput.innerHTML = `<option value="">Select Time</option>`;
+
+    populatePatientBookingTimeOptions();
+  } catch (error) {
+    console.error("Booking request save error:", error);
+
+    showPatientBookingMessage(
+      "accountBookingMessage",
+      "Appointment request was saved locally, but Firebase save failed. Please check the console.",
+      "error"
+    );
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Appointment Request";
+    }
   }
-
-  if (serviceInput) serviceInput.value = "";
-  if (dateInput) dateInput.value = "";
-  if (timeInput) timeInput.value = "";
 }
 
+function normalizePatientBookingService(service) {
+  return String(service || "").trim().toLowerCase();
+}
+
+function getPatientBookingDurationMinutes(service) {
+  const normalizedService = normalizePatientBookingService(service);
+
+  if (normalizedService === "grooming") {
+    return 90;
+  }
+
+  if (
+    normalizedService === "checkup" ||
+    normalizedService === "check-up" ||
+    normalizedService === "consultation" ||
+    normalizedService === "vaccination" ||
+    normalizedService === "deworming"
+  ) {
+    return 30;
+  }
+
+  if (normalizedService === "surgery") {
+    return 30;
+  }
+
+  return 30;
+}
+
+function timeToMinutes(timeValue) {
+  if (!timeValue || !String(timeValue).includes(":")) return null;
+
+  const [hours, minutes] = String(timeValue).split(":").map(Number);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+
+  return hours * 60 + minutes;
+}
+
+function minutesToTimeValue(totalMinutes) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function formatPatientBookingTime(timeValue) {
+  const totalMinutes = timeToMinutes(timeValue);
+
+  if (totalMinutes === null) return "-";
+
+  let hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+
+  return `${hours}:${String(minutes).padStart(2, "0")} ${ampm}`;
+}
+
+function isPatientBookingTimeWithinClinicHours(service, timeValue) {
+  const startMinutes = timeToMinutes(timeValue);
+
+  if (startMinutes === null) return false;
+
+  const clinicOpeningMinutes = 9 * 60;
+  const clinicClosingMinutes = 17 * 60;
+
+  const durationMinutes = getPatientBookingDurationMinutes(service);
+  const endMinutes = startMinutes + durationMinutes;
+
+  return startMinutes >= clinicOpeningMinutes && endMinutes <= clinicClosingMinutes;
+}
+
+function getPatientBookingTimeSlots(service) {
+  const slots = [];
+  const clinicOpeningMinutes = 9 * 60;
+  const clinicClosingMinutes = 17 * 60;
+  const durationMinutes = getPatientBookingDurationMinutes(service);
+
+  for (
+    let currentMinutes = clinicOpeningMinutes;
+    currentMinutes + durationMinutes <= clinicClosingMinutes;
+    currentMinutes += 30
+  ) {
+    slots.push(minutesToTimeValue(currentMinutes));
+  }
+
+  return slots;
+}
+
+function populatePatientBookingTimeOptions() {
+  const serviceInput = document.getElementById("accountBookingService");
+  const dateInput = document.getElementById("accountBookingDate");
+  const timeInput = document.getElementById("accountBookingTime");
+
+  if (!serviceInput || !dateInput || !timeInput) return;
+
+  const service = serviceInput.value || "";
+  const date = dateInput.value || "";
+
+  timeInput.innerHTML = `<option value="">Select Time</option>`;
+
+  if (!service) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Select service first";
+    option.disabled = true;
+    timeInput.appendChild(option);
+    return;
+  }
+
+  if (!date) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Select date first";
+    option.disabled = true;
+    timeInput.appendChild(option);
+    return;
+  }
+
+  const slots = getPatientBookingTimeSlots(service);
+
+  slots.forEach(function (slot) {
+    const option = document.createElement("option");
+    option.value = slot;
+
+    if (normalizePatientBookingService(service) === "grooming") {
+      const startMinutes = timeToMinutes(slot);
+      const endTime = minutesToTimeValue(startMinutes + 90);
+
+      option.textContent = `${formatPatientBookingTime(slot)} - ${formatPatientBookingTime(endTime)}`;
+    } else {
+      option.textContent = formatPatientBookingTime(slot);
+    }
+
+    timeInput.appendChild(option);
+  });
+}
+
+function showPatientBookingMessage(elementId, message, type = "success") {
+  const messageBox = document.getElementById(elementId);
+  if (!messageBox) return;
+
+  messageBox.textContent = message;
+  messageBox.classList.remove("hidden", "fc-success", "fc-error");
+
+  if (type === "error") {
+    messageBox.classList.add("fc-error");
+    messageBox.style.color = "#dc3545";
+    messageBox.style.fontWeight = "800";
+    return;
+  }
+
+  messageBox.classList.add("fc-success");
+  messageBox.style.color = "#198754";
+  messageBox.style.fontWeight = "800";
+}
 /* ================= RECORD ARCHIVE HELPERS ================= */
 
 function isPatientRecordArchived(record) {
@@ -3623,4 +4118,56 @@ function closeSettingsForms() {
   if (passwordForm) passwordForm.classList.add("hidden");
   if (ownerForm) ownerForm.classList.add("hidden");
   if (petForm) petForm.classList.add("hidden");
+}
+
+function updateCurrentPatientRecord(updates, activityAction = "Updated Patient Account", activityDetails = "") {
+  const patient = getCurrentPatientForLogin();
+
+  if (!patient) {
+    showNotification("Patient record not found.", "error");
+    return null;
+  }
+
+  const now = new Date().toISOString();
+
+  const cleanUpdates = {
+    ...updates,
+    updatedAt: now
+  };
+
+  const updatedPatient = {
+    ...patient,
+    ...cleanUpdates
+  };
+
+  upsertPatientRecordToLocal(updatedPatient);
+  renderPublicPatientSnapshot(updatedPatient);
+
+  const accountView = document.getElementById("patientAccountView");
+
+  if (accountView && !accountView.classList.contains("hidden")) {
+    renderPatientAccountView(updatedPatient);
+  }
+
+  const activity = {
+    dateTime: new Date().toLocaleString(),
+    module: "Patient Account",
+    action: activityAction,
+    details: activityDetails || `${updatedPatient.petName || "Patient"} updated account information`
+  };
+
+  saveRecentActivity(activity);
+
+  if (window.db) {
+    updatePatientRecordInFirebase(updatedPatient, cleanUpdates)
+      .then(function () {
+        return saveRecentActivityToFirebase(activity);
+      })
+      .catch(function (error) {
+        console.error("Firebase patient account update error:", error);
+        showNotification("Failed to sync patient update to Firebase.", "error");
+      });
+  }
+
+  return updatedPatient;
 }
