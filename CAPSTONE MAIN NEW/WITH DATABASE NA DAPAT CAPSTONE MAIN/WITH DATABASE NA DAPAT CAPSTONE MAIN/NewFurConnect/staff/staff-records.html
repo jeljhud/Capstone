@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FurConnect | Active Records</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css?v=21">
+</head>
+<body data-user-role="staff">
+
+<section id="mainSystem">
+  <div class="container-fluid p-0 overflow-hidden">
+
+    <nav class="sidebar">
+      <div class="sidebar-inner">
+        <div class="text-center mb-5 brand-wrap">
+          <img src="../pics/paw2.png" alt="paw" class="sidebar-logo mb-2">
+          <h2 class="fw-bold">FurConnect</h2>
+        </div>
+
+        <a href="staff-dashboard.html" id="btn-dashboard" class="btn btn-light nav-btn-custom">
+                    <span>
+    <i class="bi bi-speedometer2 me-2"></i>
+    Dashboard
+  </span>
+        </a>
+
+        <div class="appointment-nav-dropdown" id="appointmentDropdown">
+          <button id="btn-appointment" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
+    <span>
+      <i class="bi bi-calendar-check me-2"></i>
+      Appointment
+    </span>
+    <span class="nav-arrow">⌄</span>
+          </button>
+
+            <div class="appointment-dropdown-menu">
+              <a href="staff-registration.html" class="dropdown-link-btn">Registration</a>
+              <a href="staff-appointments.html" class="dropdown-link-btn">Appointments</a>
+              <a href="staff-appointment-logs.html" class="dropdown-link-btn">Appointment Logs</a>
+            </div>
+          </div>
+
+        <div class="appointment-nav-dropdown open" id="recordsDropdown">
+          <button id="btn-records" class="btn btn-light nav-btn-custom appointment-main-btn active-nav" type="button">
+    <span>
+      <i class="bi bi-folder2-open me-2"></i>
+      Patient Records
+    </span>
+    <span class="nav-arrow">⌄</span>
+          </button>
+
+          <div class="appointment-dropdown-menu">
+            <a href="staff-records.html" class="dropdown-link-btn active">Pet Records</a>
+            <a href="staff-archived-records.html" class="dropdown-link-btn">Archived Pet Records</a>
+          </div>
+        </div>
+
+               <div class="appointment-nav-dropdown" id="inventoryDropdown">
+  <button id="btn-inventory" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
+    <span>
+      <i class="bi bi-box-seam me-2"></i>
+      Inventory
+    </span>
+    <span class="nav-arrow">⌄</span>
+  </button>
+
+  <div class="appointment-dropdown-menu">
+    <a href="staff-inventory.html" class="dropdown-link-btn">Inventory Items</a>
+    <a href="staff-pos.html" class="dropdown-link-btn">Item Checkout</a>
+    <a href="staff-sales-history.html" class="dropdown-link-btn">Sales History</a>
+  </div>
+</div>
+
+        <!-- EMPLOYEES MODULE HIDDEN FOR DEFENSE
+        <div class="appointment-nav-dropdown" id="employeesDropdown">
+          <button id="btn-employees" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
+            <span>Employees</span>
+            <span class="nav-arrow">⌄</span>
+          </button>
+
+          <div class="appointment-dropdown-menu">
+            <a href="employees.html" class="dropdown-link-btn">Employee List</a>
+            <a href="attendance.html" class="dropdown-link-btn">Attendance</a>
+            <a href="payroll.html" class="dropdown-link-btn">Payroll</a>
+            <a href="archived-payroll.html" class="dropdown-link-btn">Archived Payroll</a>
+            <a href="archived-employees.html" class="dropdown-link-btn">Archived Employees</a>
+          </div>
+        </div>
+        -->
+
+<div class="logout-wrap">
+  <a href="/html/login.html?logout=1" id="logoutBtn" class="btn btn-light nav-btn-custom">
+        <span>
+      <i class="bi bi-box-arrow-right me-2"></i>
+      Logout
+    </span>
+  </a>
+</div>
+      </div>
+    </nav>
+
+    <main class="page-area p-4 p-lg-5">
+
+<section id="recordsPage" class="internal-page">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center page-title-wrap gap-3">
+    <div>
+      <h1 class="display-5">Pet Records</h1>
+      <p class="fs-5">Manage your pet records</p>
+    </div>
+
+    <div class="records-tools top-tools">
+      <input type="text" class="form-control search-box" id="recordsSearch" placeholder="Search">
+
+      <button class="btn btn-action px-4" id="exportQrBtn" type="button">
+        Export QR
+      </button>
+    </div>
+  </div>
+
+  <div class="card records-panel">
+    <div class="card-body p-3 p-md-4">
+      <div class="table-wrap">
+        <div class="table-responsive">
+          <table class="table custom-table align-middle" id="recordsTable">
+            <thead>
+              <tr>
+                <th class="checkbox-col">
+                  <input type="checkbox" id="selectAllRecords">
+                </th>
+                <th class="record-sortable-th" data-table="active" data-sort="id">ID</th>
+                <th>Pet Name</th>
+                <th class="record-sortable-th" data-table="active" data-sort="species">Pet Species</th>
+                <th>Breed</th>
+                <th>Owner Name</th>
+                <th>Appointment</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+
+            <tbody id="recordsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="logs-footer records-footer">
+<div id="recordsShowingText" class="logs-showing-text">
+  Page 1 of 1 • 0 records
+</div>
+        <div id="recordsPagination" class="logs-pagination"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+    </main>
+  </div>
+</section>
+
+
+<!-- QR MODAL -->
+<div id="qrModal" class="qr-modal hidden">
+  <div class="qr-modal-content">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <h3 class="m-0">Patient QR Code</h3>
+      <button class="btn btn-sm btn-danger" id="closeQrModal" type="button">Close</button>
+    </div>
+
+    <div class="qr-layout text-center">
+      <div class="mb-3">
+        <h5 id="qrPatientName">Patient Record</h5>
+        <p class="text-muted mb-0" id="qrPatientDetails">Scan this QR for patient details</p>
+      </div>
+
+      <div id="qrCodeBox" class="qr-box"></div>
+
+      <div class="mt-3">
+        <button class="btn btn-primary" id="printQrBtn" type="button">Print QR</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT PATIENT MODAL -->
+<div id="editPatientModal" class="qr-modal hidden">
+  <div class="patient-edit-modal">
+
+    <div class="patient-edit-header">
+      <h3>Pet Information</h3>
+
+      <div class="patient-edit-top">
+        <div class="patient-summary">
+          <div class="patient-avatar-wrap">
+            <label for="editPetImageInput" class="patient-avatar-label">
+              <div class="patient-avatar" id="editPatientAvatar">
+                <span id="editPatientAvatarLetter">P</span>
+                <img id="editPatientAvatarImg" alt="Pet Profile" class="hidden">
+              </div>
+
+              <div class="patient-avatar-edit-text">Edit</div>
+            </label>
+
+            <input type="file" id="editPetImageInput" accept="image/*" class="hidden">
+            <input type="hidden" id="editPetImageData">
+          </div>
+
+          <div class="patient-main-info">
+            <h4 id="editHeaderPetName">Pet Name</h4>
+            <p id="editHeaderBreed">Breed</p>
+          </div>
+
+          <div class="patient-id-box">
+            <span>PATIENT ID</span>
+            <strong id="editHeaderPatientId">P-1001</strong>
+          </div>
+        </div>
+
+        <div class="patient-top-actions">
+          <button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
+          <button type="submit" form="editPatientForm" class="btn btn-primary">Save All Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <form id="editPatientForm">
+  <input type="hidden" id="editId">
+  <input type="hidden" id="editAppointmentDate">
+  <input type="hidden" id="editAppointmentTime">
+
+  <div class="patient-edit-sections">
+    <div class="patient-edit-left">
+
+      <div class="info-grid-card">
+        <div class="info-column">
+          <h5>Pet Details</h5>
+
+          <label for="editPetName">Name</label>
+          <input type="text" class="form-control" id="editPetName">
+
+          <label for="editPetSpecies">Species</label>
+          <input type="text" class="form-control" id="editPetSpecies">
+
+          <div class="two-col">
+            <div>
+              <label for="editGender">Gender</label>
+              <input type="text" class="form-control" id="editGender">
+            </div>
+
+            <div>
+              <label for="editWeight">Weight (kg)</label>
+              <input type="text" class="form-control" id="editWeight">
+            </div>
+          </div>
+
+          <label for="editBreed">Breed</label>
+          <input type="text" class="form-control" id="editBreed">
+
+          <label for="editAge">Age</label>
+          <input type="text" class="form-control" id="editAge">
+        </div>
+
+        <div class="info-column">
+          <h5>Owner Details</h5>
+
+          <label for="editOwnerName">Name</label>
+          <input type="text" class="form-control" id="editOwnerName">
+
+          <label for="editContactNumber">Contact #</label>
+          <input type="text" class="form-control" id="editContactNumber">
+
+          <label for="editEmail">Email</label>
+          <input type="email" class="form-control" id="editEmail">
+        </div>
+
+        <div class="info-column visit-details-column">
+          <h5>Visit Details</h5>
+
+          <label for="editAppointmentType">Visit Type</label>
+          <select class="form-select custom-input" id="editAppointmentType" required>
+            <option value="">Select Service</option>
+            <option value="Grooming">Grooming</option>
+            <option value="Vaccination">Vaccination</option>
+            <option value="Deworming">Deworming</option>
+            <option value="Surgery">Surgery</option>
+          </select>
+
+          <label class="mt-2">Appointment Schedule</label>
+
+          <div class="appointment-calendar-card edit-appointment-calendar-card">
+            <div class="appointment-calendar-head">
+              <button type="button" id="editPrevCalendarMonth" class="calendar-nav-btn">‹</button>
+
+              <div>
+                <h4 id="editCalendarMonthLabel"></h4>
+                <p>Appointment date</p>
+              </div>
+
+              <button type="button" id="editNextCalendarMonth" class="calendar-nav-btn">›</button>
+            </div>
+
+            <div class="calendar-weekdays">
+              <span>MON</span>
+              <span>TUE</span>
+              <span>WED</span>
+              <span>THU</span>
+              <span>FRI</span>
+              <span>SAT</span>
+              <span>SUN</span>
+            </div>
+
+            <div id="editCalendarDays" class="appointment-calendar-days"></div>
+          </div>
+
+          <div class="appointment-slot-card edit-available-slots-card mt-3">
+            <h5>Available Slots</h5>
+            <p id="editAppointmentSelectedDateText">Select a date to view slots</p>
+            <div id="editAppointmentTimeSlots" class="calendar-slots edit-time-slots"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="notes-card">
+        <div class="notes-head">
+          <h5>Notes</h5>
+        </div>
+
+        <textarea id="editInternalNotes" class="form-control notes-area" rows="6"></textarea>
+      </div>
+
+    </div>
+  </div>
+</form>
+    <button type="button" class="modal-close-x" id="closeEditModal">×</button>
+  </div>
+</div>
+
+<!-- PUBLIC / PATIENT MOBILE PAGE -->
+<section id="publicPatientPage" class="fc-mobile-page qr-polished hidden">
+  <div class="fc-phone">
+
+    <div class="fc-statusbar">
+      <span id="fcStatusTime">9:41</span>
+      <span class="fc-status-icons">
+        <i class="bi bi-reception-4"></i>
+        <i class="bi bi-wifi"></i>
+        <i class="bi bi-battery-full"></i>
+      </span>
+    </div>
+
+   <!-- QR SCAN VIEW / EMPLOYEE VIEW -->
+<div id="patientPublicView" class="fc-screen fc-screen-public">
+
+  <div class="fc-bg-shape fc-bg-shape-one"></div>
+  <div class="fc-bg-shape fc-bg-shape-two"></div>
+
+  <header class="fc-topbar">
+    <div class="fc-brand">
+      <img src="../pics/paw2.png" alt="FurConnect">
+      <span><strong>Fur</strong>Connect</span>
+    </div>
+
+    <span class="fc-soft-plus">
+      <i class="bi bi-plus-lg"></i>
+    </span>
+  </header>
+
+  <section class="fc-profile">
+    <div class="fc-avatar" id="publicPatientAvatarWrap">
+      <span id="publicPatientAvatarLetter">P</span>
+      <img id="publicPatientAvatarImg" alt="Pet Profile" class="hidden">
+
+      <span class="fc-avatar-badge">
+        <i class="bi bi-paw-fill"></i>
+      </span>
+    </div>
+
+    <h1 id="publicPatientName">Patient Name</h1>
+    <p id="publicPatientId">Patient ID: P-0000</p>
+  </section>
+
+  <section class="fc-menu-card">
+    <button type="button" class="fc-menu-item active" data-public-target="emergency">
+      <span class="fc-menu-icon">
+        <i class="bi bi-telephone-fill"></i>
+      </span>
+
+      <span class="fc-menu-copy">
+        <strong>Emergency Contact</strong>
+        <small>View emergency contact details</small>
+      </span>
+
+      <span class="fc-chevron">
+        <i class="bi bi-chevron-right"></i>
+      </span>
+    </button>
+
+    <button type="button" class="fc-menu-item" data-public-target="medical">
+      <span class="fc-menu-icon">
+        <i class="bi bi-clipboard2-pulse-fill"></i>
+      </span>
+
+      <span class="fc-menu-copy">
+        <strong>Brief Medical History</strong>
+        <small>View brief medical background</small>
+      </span>
+
+      <span class="fc-chevron">
+        <i class="bi bi-chevron-right"></i>
+      </span>
+    </button>
+
+    <button type="button" class="fc-menu-item fc-locked" id="publicPatientLoginBtn">
+      <span class="fc-menu-icon">
+        <i class="bi bi-lock-fill"></i>
+      </span>
+
+      <span class="fc-menu-copy">
+        <strong>Patient Login</strong>
+        <small>Login to access your account</small>
+      </span>
+
+      <span class="fc-lock">
+        <i class="bi bi-lock-fill"></i>
+      </span>
+    </button>
+  </section>
+
+  <section class="fc-panels">
+    <div class="fc-info-card active" id="publicPanel-emergency">
+      <div class="fc-card-header">
+        <h2>Emergency Contact</h2>
+
+        <span>
+          <i class="bi bi-shield-fill-plus"></i>
+        </span>
+      </div>
+
+      <div class="fc-card-content">
+        <div class="fc-card-icon">
+          <i class="bi bi-telephone-fill"></i>
+        </div>
+
+        <div class="fc-card-body">
+          <label>Name</label>
+          <strong id="publicEmergencyName">-</strong>
+
+          <hr>
+
+          <label>Contact</label>
+          <strong id="publicEmergencyContact">-</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="fc-info-card hidden" id="publicPanel-medical">
+      <div class="fc-card-header">
+        <h2>Brief Medical History</h2>
+
+        <span>
+          <i class="bi bi-heart-pulse-fill"></i>
+        </span>
+      </div>
+
+      <div class="fc-card-content">
+        <div class="fc-card-icon">
+          <i class="bi bi-heart-pulse-fill"></i>
+        </div>
+
+        <div class="fc-card-body">
+          <label>Species</label>
+          <strong id="publicPetSpecies">-</strong>
+
+          <hr>
+
+          <label>Breed</label>
+          <strong id="publicPetBreed">-</strong>
+
+          <hr>
+
+          <label>Notes</label>
+          <strong id="publicInternalNotes">No medical notes yet.</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="fc-footer-text">
+    <i class="bi bi-heart-pulse"></i>
+    © 2026 <strong>FurConnect</strong> • All rights reserved
+  </footer>
+</div>
+
+
+  <!-- PATIENT ACCOUNT VIEW -->
+<div id="patientAccountView" class="fc-screen fc-screen-account hidden">
+
+  <header class="fc-topbar fc-account-topbar">
+    <div class="fc-brand">
+      <img src="../pics/paw2.png" alt="FurConnect">
+      <span>FurConnect</span>
+    </div>
+
+    <button type="button" class="fc-bell">
+      <i class="bi bi-bell-fill"></i>
+      <i></i>
+    </button>
+  </header>
+
+  <section class="fc-account-hero">
+    <div class="fc-account-wave"></div>
+
+    <div class="fc-profile fc-account-profile">
+      <div class="fc-avatar fc-account-avatar">
+        <span id="accountPatientAvatarLetter">P</span>
+        <img id="accountPatientAvatarImg" alt="Pet Profile" class="hidden">
+        <b>✓</b>
+      </div>
+
+      <h1 id="accountPatientName">Patient Name</h1>
+      <p id="accountPatientId">Patient ID: P-0000</p>
+      <div class="fc-active-badge"><span></span>Active Patient</div>
+    </div>
+  </section>
+
+  <!-- HOME -->
+  <div id="patientAccountHome" class="patient-account-page fc-account-page">
+    <section class="fc-account-menu">
+
+      <button type="button" class="fc-account-item" onclick="openPatientAccountPage('ownerInfo')">
+        <span class="fc-square-icon">
+          <i class="bi bi-person-heart"></i>
+        </span>
+        <span>
+          <strong>Owner & Pet Information</strong>
+          <small>View your pet and owner details</small>
+        </span>
+        <em><i class="bi bi-chevron-right"></i></em>
+      </button>
+
+      <button type="button" class="fc-account-item" onclick="openPatientAccountPage('history')">
+        <span class="fc-square-icon">
+          <i class="bi bi-heart-pulse-fill"></i>
+        </span>
+        <span>
+          <strong>Medical History</strong>
+          <small>View medical records and history</small>
+        </span>
+        <em><i class="bi bi-chevron-right"></i></em>
+      </button>
+
+      <button type="button" class="fc-account-item" onclick="openPatientAccountPage('appointments')">
+        <span class="fc-square-icon">
+          <i class="bi bi-calendar-check-fill"></i>
+        </span>
+        <span>
+          <strong>Appointments</strong>
+          <small>View your scheduled appointments</small>
+        </span>
+        <em><i class="bi bi-chevron-right"></i></em>
+      </button>
+
+      <button type="button" class="fc-account-item" onclick="openPatientAccountPage('book')">
+        <span class="fc-square-icon">
+          <i class="bi bi-calendar-plus-fill"></i>
+        </span>
+        <span>
+          <strong>Book Appointment</strong>
+          <small>Schedule a new appointment</small>
+        </span>
+        <em><i class="bi bi-chevron-right"></i></em>
+      </button>
+
+      <button type="button" class="fc-account-item" onclick="openPatientAccountPage('settings')">
+        <span class="fc-square-icon">
+          <i class="bi bi-gear-fill"></i>
+        </span>
+        <span>
+          <strong>Account Settings</strong>
+          <small>View account options</small>
+        </span>
+        <em><i class="bi bi-chevron-right"></i></em>
+      </button>
+
+      <button type="button" class="fc-logout" id="patientAccountLogoutBtn">
+        Logout
+      </button>
+    </section>
+  </div>
+
+  <!-- OWNER INFO -->
+  <div id="patientAccountPage-ownerInfo" class="patient-account-page fc-account-page hidden">
+    <button type="button" class="fc-back-btn" onclick="openPatientAccountPage('home')">← Back</button>
+
+    <div class="fc-detail-card">
+      <h2>Owner Information</h2>
+      <div><label>Owner</label><strong id="accountOwnerName">-</strong></div>
+      <div><label>Contact</label><strong id="accountOwnerContact">-</strong></div>
+      <div><label>Email</label><strong id="accountOwnerEmail">-</strong></div>
+    </div>
+
+    <div class="fc-detail-card">
+      <h2>Pet Information</h2>
+      <div><label>Pet Name</label><strong id="accountPetName">-</strong></div>
+      <div><label>Species</label><strong id="accountPetSpecies">-</strong></div>
+      <div><label>Breed</label><strong id="accountPetBreed">-</strong></div>
+      <div><label>Age</label><strong id="accountPetAge">-</strong></div>
+      <div><label>Gender</label><strong id="accountPetGender">-</strong></div>
+      <div><label>Weight</label><strong id="accountPetWeight">-</strong></div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="patientAccountPage-history" class="patient-account-page fc-account-page hidden">
+    <button type="button" class="fc-back-btn" onclick="openPatientAccountPage('home')">← Back</button>
+
+    <div class="fc-detail-card">
+      <h2>Medical History</h2>
+      <div><label>Notes</label><strong id="accountMedicalNotes">No medical notes yet.</strong></div>
+    </div>
+  </div>
+
+  <!-- APPOINTMENTS -->
+  <div id="patientAccountPage-appointments" class="patient-account-page fc-account-page hidden">
+    <button type="button" class="fc-back-btn" onclick="openPatientAccountPage('home')">← Back</button>
+
+    <div class="fc-detail-card">
+      <h2>Appointments</h2>
+      <div><label>Current Schedule</label><strong id="accountCurrentSchedule">-</strong></div>
+      <div><label>Appointment Type</label><strong id="accountAppointmentType">-</strong></div>
+      <div><label>Status</label><strong id="accountAppointmentStatus">Waiting</strong></div>
+    </div>
+  </div>
+
+  <!-- BOOK -->
+  <div id="patientAccountPage-book" class="patient-account-page fc-account-page hidden">
+    <button type="button" class="fc-back-btn" onclick="openPatientAccountPage('home')">← Back</button>
+
+    <div class="fc-detail-card">
+      <h2>Book Appointment</h2>
+      <p>Request a new appointment for this patient.</p>
+
+      <select id="accountBookingService" class="fc-input">
+        <option value="">Select Service</option>
+        <option value="Grooming">Grooming</option>
+        <option value="Vaccination">Vaccination</option>
+        <option value="Deworming">Deworming</option>
+        <option value="Surgery">Surgery</option>
+        <option value="Checkup">Checkup</option>
+      </select>
+
+      <input type="date" id="accountBookingDate" class="fc-input">
+     <select id="accountBookingTime" class="fc-input">
+  <option value="">Select Time</option>
+</select>
+
+      <button type="button" class="fc-submit-btn" id="accountSubmitBookingBtn">
+        Submit Appointment Request
+      </button>
+
+      <div id="accountBookingMessage" class="fc-success hidden"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="patientAccountPage-settings" class="patient-account-page fc-account-page hidden">
+    <button type="button" class="fc-back-btn" onclick="openPatientAccountPage('home')">← Back</button>
+
+    <div class="fc-detail-card">
+      <h2>Account Settings</h2>
+      <div><label>Patient ID</label><strong id="settingsPatientId">-</strong></div>
+      <div><label>Password</label><strong>patient123</strong></div>
+    </div>
+  </div>
+</div>
+
+  </div>
+</section>
+
+<!-- PATIENT LOGIN MODAL -->
+<div id="publicPatientLoginModal" class="fc-login-modal hidden">
+  <div class="fc-login-card">
+    <button type="button" class="fc-login-close" id="publicLoginCloseBtn">×</button>
+
+    <div class="fc-login-icon">
+      <i class="bi bi-lock-fill"></i>
+    </div>
+
+    <h3>Patient Login</h3>
+    <p>Login using your Patient ID and password.</p>
+
+    <label for="publicLoginPatientId">Patient ID</label>
+    <input 
+      type="text" 
+      id="publicLoginPatientId" 
+      class="fc-input" 
+      readonly
+    >
+
+    <label for="publicLoginPassword">Password</label>
+    <input 
+      type="password" 
+      id="publicLoginPassword" 
+      class="fc-input" 
+      placeholder="Enter password"
+      autocomplete="off"
+    >
+
+    <div id="publicLoginError" class="fc-login-error hidden"></div>
+
+    <button type="button" class="fc-login-submit" id="publicLoginSubmitBtn">
+      Login
+    </button>
+  </div>
+</div>
+
+<div id="notificationContainer" class="notif-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<script src="../js/navigation.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-storage-compat.js"></script>
+
+<script src="../js/firebase-config.js?v=3"></script>
+<script src="../js/records.js?v=62"></script>
+<script src="../js/auth.js"></script>
+</body>
+</html>

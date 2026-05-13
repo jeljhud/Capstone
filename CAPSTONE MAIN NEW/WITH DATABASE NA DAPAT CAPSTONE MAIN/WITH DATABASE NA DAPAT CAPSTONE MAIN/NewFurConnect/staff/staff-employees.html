@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Employees</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <nav class="sidebar">
+    <h2>FurConnect</h2>
+
+    <a href="dashboard.html">Dashboard</a>
+    <a href="appointments.html">Appointments</a>
+    <a href="records.html">Records</a>
+<div class="appointment-nav-dropdown" id="inventoryDropdown">
+  <button id="btn-inventory" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
+    <span>Inventory</span>
+    <span class="nav-arrow">⌄</span>
+  </button>
+
+  <div class="appointment-dropdown-menu">
+    <a href="inventory.html" class="dropdown-link-btn">Inventory Items</a>
+    <a href="pos.html" class="dropdown-link-btn">Item Checkout</a>
+    <a href="sales-history.html" class="dropdown-link-btn">Sales History</a>
+  </div>
+</div>
+    <a href="employees.html">Employees</a>
+
+<div class="logout-wrap">
+  <a href="/html/login.html?logout=1" id="logoutBtn" class="btn btn-light nav-btn-custom">Logout</a>
+</div>
+  </nav>
+
+  <main class="content">
+    <h1>Employees</h1>
+  </main>
+
+</body>
+</html>

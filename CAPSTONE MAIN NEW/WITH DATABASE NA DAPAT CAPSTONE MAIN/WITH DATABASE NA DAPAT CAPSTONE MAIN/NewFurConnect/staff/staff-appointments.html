@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FurConnect | Appointment Registration</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <section id="mainSystem">
+    <div class="container-fluid p-0 overflow-hidden">
+
+      <nav class="sidebar">
+        <div class="sidebar-inner">
+          <div class="text-center mb-5 brand-wrap">
+            <img src="../pics/paw2.png" alt="paw" class="sidebar-logo mb-2">
+            <h2 class="fw-bold">FurConnect</h2>
+          </div>
+
+          <a href="staff-dashboard.html" id="btn-dashboard" class="btn btn-light nav-btn-custom">
+                      <span>
+    <i class="bi bi-speedometer2 me-2"></i>
+    Dashboard
+  </span>
+          </a>
+
+          <div class="appointment-nav-dropdown open" id="appointmentDropdown">
+            <button id="btn-appointment" class="btn btn-light nav-btn-custom appointment-main-btn active-nav" type="button">
+    <span>
+      <i class="bi bi-calendar-check me-2"></i>
+      Appointment
+    </span>
+    <span class="nav-arrow">⌄</span>
+            </button>
+
+            <div class="appointment-dropdown-menu">
+              <a href="staff-registration.html" class="dropdown-link-btn">Registration</a>
+              <a href="staff-appointments.html" class="dropdown-link-btn active">Appointments</a>
+              <a href="staff-appointment-logs.html" class="dropdown-link-btn">Appointment Logs</a>
+            </div>
+          </div>
+
+          <div class="appointment-nav-dropdown" id="recordsDropdown">
+            <button id="btn-records" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
+    <span>
+      <i class="bi bi-folder2-open me-2"></i>
+      Patient Records
+    </span>
+    <span class="nav-arrow">⌄</span>
+            </button>
+
+            <div class="appointment-dropdown-menu">
+              <a href="staff-records.html" class="dropdown-link-btn">Pet Records</a>
+              <a href="staff-archived-records.html" class="dropdown-link-btn">Archived Pet Records</a>
+            </div>
+          </div>
+
+
+                  <div class="appointment-nav-dropdown" id="inventoryDropdown">
+  <button id="btn-inventory" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
+    <span>
+      <i class="bi bi-box-seam me-2"></i>
+      Inventory
+    </span>
+    <span class="nav-arrow">⌄</span>
+  </button>
+
+  <div class="appointment-dropdown-menu">
+    <a href="staff-inventory.html" class="dropdown-link-btn">Inventory Items</a>
+    <a href="staff-pos.html" class="dropdown-link-btn">Item Checkout</a>
+    <a href="staff-sales-history.html" class="dropdown-link-btn">Sales History</a>
+  </div>
+</div>
+
+          <!-- <div class="appointment-nav-dropdown" id="employeesDropdown">
+            <button id="btn-employees" class="btn btn-light nav-btn-custom appointment-main-btn" type="button">
+              <span>Employees</span>
+              <span class="nav-arrow">⌄</span>
+            </button> -->
+
+            <!-- <div class="appointment-dropdown-menu">
+              <a href="employees.html" class="dropdown-link-btn">Employee List</a>
+              <a href="attendance.html" class="dropdown-link-btn">Attendance</a>
+              <a href="payroll.html" class="dropdown-link-btn">Payroll</a>
+              <a href="archived-payroll.html" class="dropdown-link-btn">Archived Payroll</a>
+              <a href="archived-employees.html" class="dropdown-link-btn">Archived Employees</a>
+            </div>
+          </div> -->
+
+<div class="logout-wrap">
+  <a href="/html/login.html?logout=1" id="logoutBtn" class="btn btn-light nav-btn-custom">
+        <span>
+      <i class="bi bi-box-arrow-right me-2"></i>
+      Logout
+    </span>
+  </a>
+</div>
+        </div>
+      </nav>
+
+
+      <main class="page-area p-4 p-lg-5">
+
+        <section id="appointmentPage" class="internal-page">
+          <div class="page-title-wrap">
+            <h1 class="display-6">Schedule an Appointment</h1>
+            <p class="fs-5">Please fill all the information to set appointments</p>
+          </div>
+
+          <div class="card appointment-panel">
+            <div class="card-body p-4 p-md-5">
+<form id="appointmentForm">
+  <input type="hidden" id="selectedPatientId">
+  <input type="hidden" id="appointmentDate" required>
+  <input type="hidden" id="appointmentTime" required>
+
+  <div class="appointment-flow-card">
+
+    <div class="appointment-step">
+      <div class="section-title">Select Patient</div>
+      <p class="step-subtitle">Select a patient ID to view information</p>
+
+      <select id="patientSelect" class="form-select custom-input">
+  <option value="">Select Patient ID</option>
+</select>
+
+      <div id="selectedPatientInfo" class="selected-patient-info hidden">
+        <div>
+          <span>Patient ID</span>
+          <strong id="viewPatientId">-</strong>
+        </div>
+        <div>
+          <span>Pet Name</span>
+          <strong id="viewPetName">-</strong>
+        </div>
+        <div>
+          <span>Owner</span>
+          <strong id="viewOwnerName">-</strong>
+        </div>
+        <div>
+          <span>Species</span>
+          <strong id="viewPetSpecies">-</strong>
+        </div>
+        <div>
+          <span>Breed</span>
+          <strong id="viewBreed">-</strong>
+        </div>
+        <div>
+          <span>Contact</span>
+          <strong id="viewContactNumber">-</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="appointment-step">
+      <div class="section-title">Select Service</div>
+      <p class="step-subtitle">Choose appointment service first</p>
+
+      <select id="appointmentType" class="form-select custom-input" required>
+        <option value="">Select Service</option>
+        <option value="Checkup">Checkup</option>
+        <option value="Grooming">Grooming</option>
+        <option value="Vaccination">Vaccination</option>
+        <option value="Deworming">Deworming</option>
+        <option value="Surgery">Surgery</option>
+      </select>
+    </div>
+
+    <div id="appointmentScheduleSection" class="appointment-step hidden">
+      <div class="section-title">Select Date & Time</div>
+
+      <div class="appointment-calendar-card">
+        <div class="appointment-calendar-head">
+          <button type="button" id="prevCalendarMonth" class="calendar-nav-btn">‹</button>
+
+          <div>
+            <h4 id="calendarMonthLabel">April 2026</h4>
+            <p>Choose appointment date</p>
+          </div>
+
+          <button type="button" id="nextCalendarMonth" class="calendar-nav-btn">›</button>
+        </div>
+
+        <div class="calendar-weekdays">
+          <span>MON</span>
+          <span>TUE</span>
+          <span>WED</span>
+          <span>THU</span>
+          <span>FRI</span>
+          <span>SAT</span>
+          <span>SUN</span>
+        </div>
+
+        <div id="appointmentCalendarDays" class="appointment-calendar-days"></div>
+      </div>
+
+      <div class="appointment-slot-card mt-3">
+        <h4>Available Slots</h4>
+        <p id="appointmentSelectedDateText">Select a date to view slots</p>
+        <div id="appointmentTimeSlots" class="appointment-time-slots calendar-slots"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="appointment-submit-wrap">
+    <button type="button" class="btn btn-set register-submit-btn" id="setAppointmentBtn">
+      Set Appointment
+    </button>
+  </div>
+</form>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </section>
+
+  <div id="notificationContainer" class="notif-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/navigation.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-storage-compat.js"></script>
+
+<script src="../js/firebase-config.js?v=3"></script>
+<script src="../js/appointments.js?v=63"></script>
+<script src="../js/auth.js"></script>
+</body>
+</html>
